@@ -1685,8 +1685,6 @@ define("@scom/scom-xchain-widget/crosschain-utils/API.ts", ["require", "exports"
     }
     exports.getVaultGroupsUpdateOrders = getVaultGroupsUpdateOrders;
     async function getVaultGroupsUpdateOrders2(state, isUpdate) {
-        console.time("orders");
-        console.log("getVaultGroupsUpdateOrders2", isUpdate);
         let wallet = eth_wallet_4.Wallet.getClientInstance();
         let networks = (0, index_7.getNetworksByType)(wallet.chainId);
         let vaultGroupsStore = state.getVaultGroups();
@@ -1705,7 +1703,6 @@ define("@scom/scom-xchain-widget/crosschain-utils/API.ts", ["require", "exports"
             await (0, index_7.forEachNumberIndexAwait)(group.vaults, async (vault, chainId) => {
                 if (networks.every(n => n !== chainId))
                     return;
-                console.log(group.assetName, chainId);
                 let wallet = initCrossChainWallet(state, chainId);
                 let vaultContract = new oswap_cross_chain_bridge_contract_1.Contracts.OSWAP_BridgeVault(wallet, vault.vaultAddress);
                 let ordersLength = await vaultContract.ordersLength();
@@ -1754,9 +1751,7 @@ define("@scom/scom-xchain-widget/crosschain-utils/API.ts", ["require", "exports"
                 }
             });
         }
-        console.log(vaultGroupsStore);
         state.setVaultGroups(vaultGroupsStore);
-        console.timeEnd("orders");
         return vaultGroupsStore;
     }
 });
@@ -3069,7 +3064,6 @@ define("@scom/scom-xchain-widget/bridge-record/bridgeRecordAPI.ts", ["require", 
         return label;
     };
     const getAllUserOrders = async (state) => {
-        console.log("getAllUserOrders");
         let vgs = await (0, index_10.getVaultGroupsUpdateOrders)(state, true);
         let orders = [];
         vgs.forEach(vg => {
@@ -4361,7 +4355,8 @@ define("@scom/scom-xchain-widget/formSchema.ts", ["require", "exports", "@ijstec
                             return control.token?.address || control.token?.symbol;
                         },
                         setData: (control, value, rowData) => {
-                            control.chainId = rowData.chainId;
+                            if (rowData)
+                                control.chainId = rowData.chainId;
                             control.address = value;
                         }
                     }
@@ -6409,6 +6404,9 @@ define("@scom/scom-xchain-widget", ["require", "exports", "@ijstech/components",
             const isApproveButtonShown = this.crossChainApprovalStatus !== ApprovalStatus.NONE;
             if (!(0, index_16.isWalletConnected)()) {
                 return 'Connect Wallet';
+            }
+            if (!this.state.isRpcWalletConnected()) {
+                return 'Switch Network';
             }
             if (isApproveButtonShown) {
                 const status = this.crossChainApprovalStatus;

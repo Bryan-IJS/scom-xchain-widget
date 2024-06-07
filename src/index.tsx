@@ -1388,6 +1388,9 @@ export default class ScomXchainWidget extends Module {
     if (!isWalletConnected()) {
       return 'Connect Wallet';
     }
+    if (!this.state.isRpcWalletConnected()) {
+      return 'Switch Network';
+    }
     if (isApproveButtonShown) {
       const status = this.crossChainApprovalStatus;
       switch (status) {

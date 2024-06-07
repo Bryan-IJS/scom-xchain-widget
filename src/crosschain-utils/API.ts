@@ -430,10 +430,7 @@ async function getVaultGroupsUpdateOrders(state: State, isUpdate?: boolean): Pro
   return vaultGroupsStore;
 }
 
-async function getVaultGroupsUpdateOrders2(state: State, isUpdate?: boolean): Promise<VaultGroupStore[]> {
-  console.time("orders");
-  console.log("getVaultGroupsUpdateOrders2",isUpdate);
-  
+async function getVaultGroupsUpdateOrders2(state: State, isUpdate?: boolean): Promise<VaultGroupStore[]> {  
   let wallet = Wallet.getClientInstance();
   let networks = getNetworksByType(wallet.chainId);
   let vaultGroupsStore = state.getVaultGroups();
@@ -453,7 +450,6 @@ async function getVaultGroupsUpdateOrders2(state: State, isUpdate?: boolean): Pr
     await forEachNumberIndexAwait(group.vaults, async (vault, chainId) => {
 
       if (networks.every(n => n !== chainId)) return;
-      console.log(group.assetName,chainId);
       let wallet = initCrossChainWallet(state, chainId);
       let vaultContract = new xChainContracts.OSWAP_BridgeVault(wallet, vault.vaultAddress);
       let ordersLength = await vaultContract.ordersLength();
@@ -508,10 +504,8 @@ async function getVaultGroupsUpdateOrders2(state: State, isUpdate?: boolean): Pr
       }
     });
   }
-  console.log(vaultGroupsStore);
 
   state.setVaultGroups(vaultGroupsStore);
-  console.timeEnd("orders");
   return vaultGroupsStore;
 }
 

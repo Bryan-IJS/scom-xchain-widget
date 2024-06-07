@@ -42,8 +42,6 @@ const getVaultOrderStatusLabel = (status: VaultOrderStatus) => {
 }
 
 const getAllUserOrders = async (state: State) => {
-  console.log("getAllUserOrders");
-
   let vgs = await getVaultGroupsUpdateOrders(state, true);
   let orders: VaultOrderStore[] = [];
   vgs.forEach(vg => {

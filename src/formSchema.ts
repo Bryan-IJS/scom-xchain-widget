@@ -348,7 +348,7 @@ export function getBuilderSchema() {
                         return control.token?.address || control.token?.symbol;
                     },
                     setData: (control: ScomTokenInput, value: string, rowData: any) => {
-                        control.chainId = rowData.chainId;
+                        if (rowData) control.chainId = rowData.chainId;
                         control.address = value;
                     }
                 }
