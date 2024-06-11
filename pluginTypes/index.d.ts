@@ -1042,7 +1042,7 @@ declare module "@scom/scom-xchain-widget/bridge-record/index.tsx" {
         private getFilteredData;
         private onSelectIndex;
         private refreshData;
-        private onSetupPage;
+        private refreshUI;
         private renderEmpty;
         private onChangeSorting;
         private onChangeSource;

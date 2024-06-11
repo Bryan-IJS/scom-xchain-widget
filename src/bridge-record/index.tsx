@@ -258,15 +258,11 @@ export class BridgeRecord extends Module {
       connected: isConnected,
       loading: true
     }
-    if (isConnected) {
-      await this.onSetupPage(true);
-    } else {
-      await this.onSetupPage(false);
-    }
+    await this.refreshUI(isConnected);
     this.initializedState.loading = false;
   }
 
-  private onSetupPage = async (connected: boolean) => {
+  private refreshUI = async (connected: boolean) => {
     this.isPageKept = false;
     this.paging.currentPage = 1;
     this.sortByDate = DateOptions.LATEST;
@@ -299,7 +295,6 @@ export class BridgeRecord extends Module {
       <i-image url={Assets.fullPath('img/icon-advice.svg')} />
       <i-panel>
         <i-label
-          id="emptyMsg"
           caption="No Data"
           font={{ size: '1rem', color: Theme.text.primary, bold: true }}
           margin={{ left: 10 }}
@@ -502,12 +497,13 @@ export class BridgeRecord extends Module {
     this.searchTokenGroupBtn.onClick = () => this.searchTokenGroupModal.visible = !this.searchTokenGroupModal.visible;
     this.setVisibleMd(false);
 
+    const isConnected = isWalletConnected();
     this.initializedState = {
       chainId: this.state.getChainId(),
-      connected: isWalletConnected(),
+      connected: isConnected,
       loading: true
     }
-    await this.onSetupPage(isWalletConnected());
+    await this.refreshUI(isConnected);
     this.initializedState.loading = false;
   }
 
@@ -588,7 +584,11 @@ export class BridgeRecord extends Module {
         this.switchNetworkByWallet();
       } else {
         const rpcWallet = this.state.getRpcWallet();
-        await rpcWallet.switchNetwork(this.switchChainId);
+        if (rpcWallet.chainId != this.switchChainId) {
+          await rpcWallet.switchNetwork(this.switchChainId);
+        }
+        const clientWallet = Wallet.getClientInstance();
+        await clientWallet.switchNetwork(this.switchChainId);
       }
     } catch {
       this.removeCurrentValues();
@@ -600,7 +600,7 @@ export class BridgeRecord extends Module {
       const { fromNetwork, toNetwork } = this.selectedItem;
       if (this.currentAction === ActionType.Resubmit) {
         this.resubmitOrderModal.visible = true;
-        if (fromNetwork.chainId != this.chainId) {
+        if (fromNetwork.chainId != this.chainId || !this.state.isRpcWalletConnected()) {
           this.resubmitConfirmPnl.visible = false;
           this.resubmitConfirmNetwork.visible = true;
         } else {
@@ -610,7 +610,7 @@ export class BridgeRecord extends Module {
       } else if (this.currentAction === ActionType.Cancel) {
         this.requestCancelModal.visible = true;
         const network = this.isCancel ? toNetwork : fromNetwork;
-        if (network.chainId != this.chainId) {
+        if (network.chainId != this.chainId || !this.state.isRpcWalletConnected()) {
           this.switchNetworkPnl.visible = true;
           this.confirmNetwork.visible = false;
         } else {
@@ -628,7 +628,7 @@ export class BridgeRecord extends Module {
     const { fromNetwork, toNetwork, protocolFee } = record;
     const network = isCancel ? toNetwork : fromNetwork;
     this.switchChainId = network.chainId;
-    if (network.chainId != this.chainId) {
+    if (network.chainId != this.chainId || !this.state.isRpcWalletConnected()) {
       this.switchNetworkPnl.visible = true;
       this.confirmNetwork.visible = false;
     } else {
@@ -654,10 +654,7 @@ export class BridgeRecord extends Module {
     this.btnElm = elm;
     this.selectedItem = record;
     const { fromNetwork, toToken, toNetwork } = record;
-    // if (!this.transactionSettingsLayout.showSlippageOnly) {
-    //   this.transactionSettingsLayout.showSlippageOnly = true;
-    // }
-    if (fromNetwork.chainId != this.chainId) {
+    if (fromNetwork.chainId != this.chainId || !this.state.isRpcWalletConnected()) {
       this.resubmitConfirmPnl.visible = false;
       this.resubmitConfirmNetwork.visible = true;
     } else {

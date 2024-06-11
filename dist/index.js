@@ -3244,15 +3244,10 @@ define("@scom/scom-xchain-widget/bridge-record/index.tsx", ["require", "exports"
                     connected: isConnected,
                     loading: true
                 };
-                if (isConnected) {
-                    await this.onSetupPage(true);
-                }
-                else {
-                    await this.onSetupPage(false);
-                }
+                await this.refreshUI(isConnected);
                 this.initializedState.loading = false;
             };
-            this.onSetupPage = async (connected) => {
+            this.refreshUI = async (connected) => {
                 this.isPageKept = false;
                 this.paging.currentPage = 1;
                 this.sortByDate = "Latest" /* DateOptions.LATEST */;
@@ -3501,7 +3496,11 @@ define("@scom/scom-xchain-widget/bridge-record/index.tsx", ["require", "exports"
                     }
                     else {
                         const rpcWallet = this.state.getRpcWallet();
-                        await rpcWallet.switchNetwork(this.switchChainId);
+                        if (rpcWallet.chainId != this.switchChainId) {
+                            await rpcWallet.switchNetwork(this.switchChainId);
+                        }
+                        const clientWallet = eth_wallet_7.Wallet.getClientInstance();
+                        await clientWallet.switchNetwork(this.switchChainId);
                     }
                 }
                 catch {
@@ -3513,7 +3512,7 @@ define("@scom/scom-xchain-widget/bridge-record/index.tsx", ["require", "exports"
                     const { fromNetwork, toNetwork } = this.selectedItem;
                     if (this.currentAction === 1 /* ActionType.Resubmit */) {
                         this.resubmitOrderModal.visible = true;
-                        if (fromNetwork.chainId != this.chainId) {
+                        if (fromNetwork.chainId != this.chainId || !this.state.isRpcWalletConnected()) {
                             this.resubmitConfirmPnl.visible = false;
                             this.resubmitConfirmNetwork.visible = true;
                         }
@@ -3525,7 +3524,7 @@ define("@scom/scom-xchain-widget/bridge-record/index.tsx", ["require", "exports"
                     else if (this.currentAction === 0 /* ActionType.Cancel */) {
                         this.requestCancelModal.visible = true;
                         const network = this.isCancel ? toNetwork : fromNetwork;
-                        if (network.chainId != this.chainId) {
+                        if (network.chainId != this.chainId || !this.state.isRpcWalletConnected()) {
                             this.switchNetworkPnl.visible = true;
                             this.confirmNetwork.visible = false;
                         }
@@ -3543,7 +3542,7 @@ define("@scom/scom-xchain-widget/bridge-record/index.tsx", ["require", "exports"
                 const { fromNetwork, toNetwork, protocolFee } = record;
                 const network = isCancel ? toNetwork : fromNetwork;
                 this.switchChainId = network.chainId;
-                if (network.chainId != this.chainId) {
+                if (network.chainId != this.chainId || !this.state.isRpcWalletConnected()) {
                     this.switchNetworkPnl.visible = true;
                     this.confirmNetwork.visible = false;
                 }
@@ -3569,10 +3568,7 @@ define("@scom/scom-xchain-widget/bridge-record/index.tsx", ["require", "exports"
                 this.btnElm = elm;
                 this.selectedItem = record;
                 const { fromNetwork, toToken, toNetwork } = record;
-                // if (!this.transactionSettingsLayout.showSlippageOnly) {
-                //   this.transactionSettingsLayout.showSlippageOnly = true;
-                // }
-                if (fromNetwork.chainId != this.chainId) {
+                if (fromNetwork.chainId != this.chainId || !this.state.isRpcWalletConnected()) {
                     this.resubmitConfirmPnl.visible = false;
                     this.resubmitConfirmNetwork.visible = true;
                 }
@@ -3804,7 +3800,7 @@ define("@scom/scom-xchain-widget/bridge-record/index.tsx", ["require", "exports"
             const emptyElm = this.$render("i-panel", { class: "queue-header" },
                 this.$render("i-image", { url: assets_2.default.fullPath('img/icon-advice.svg') }),
                 this.$render("i-panel", null,
-                    this.$render("i-label", { id: "emptyMsg", caption: "No Data", font: { size: '1rem', color: Theme.text.primary, bold: true }, margin: { left: 10 } })));
+                    this.$render("i-label", { caption: "No Data", font: { size: '1rem', color: Theme.text.primary, bold: true }, margin: { left: 10 } })));
             const td = source.querySelector('td');
             td && td.appendChild(emptyElm);
         }
@@ -3854,12 +3850,13 @@ define("@scom/scom-xchain-widget/bridge-record/index.tsx", ["require", "exports"
             this.searchDestinationBtn.onClick = () => this.searchDestinationModal.visible = !this.searchDestinationModal.visible;
             this.searchTokenGroupBtn.onClick = () => this.searchTokenGroupModal.visible = !this.searchTokenGroupModal.visible;
             this.setVisibleMd(false);
+            const isConnected = (0, index_13.isWalletConnected)();
             this.initializedState = {
                 chainId: this.state.getChainId(),
-                connected: (0, index_13.isWalletConnected)(),
+                connected: isConnected,
                 loading: true
             };
-            await this.onSetupPage((0, index_13.isWalletConnected)());
+            await this.refreshUI(isConnected);
             this.initializedState.loading = false;
         }
         get targetTokenList() {
