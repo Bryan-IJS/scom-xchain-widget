@@ -340,7 +340,7 @@ export default class ScomXchainWidget extends Module {
     const formSchema: any = getBuilderSchema();
     const dataSchema = formSchema.dataSchema;
     const uiSchema = formSchema.uiSchema;
-    const customControls = formSchema.customControls(this.state?.getRpcWallet()?.instanceId);
+    const customControls = formSchema.customControls();
     let self = this;
     const actions: any[] = [
       {

@@ -1,7 +1,7 @@
-/// <reference path="@ijstech/eth-contract/index.d.ts" />
 /// <reference path="@ijstech/eth-wallet/index.d.ts" />
 /// <reference path="@scom/scom-commission-proxy-contract/@ijstech/eth-wallet/index.d.ts" />
 /// <reference path="@scom/scom-dapp-container/@ijstech/eth-wallet/index.d.ts" />
+/// <reference path="@ijstech/eth-contract/index.d.ts" />
 /// <amd-module name="@scom/scom-xchain-widget/store/data/core.ts" />
 declare module "@scom/scom-xchain-widget/store/data/core.ts" {
     import { BigNumber } from "@ijstech/eth-wallet";
@@ -132,19 +132,13 @@ declare module "@scom/scom-xchain-widget/store/data/tokens/index.ts" {
     };
     export { SupportedERC20Tokens };
 }
-/// <amd-module name="@scom/scom-xchain-widget/store/data/dummy.ts" />
-declare module "@scom/scom-xchain-widget/store/data/dummy.ts" {
-    export const dummyAddressList: string[];
-}
 /// <amd-module name="@scom/scom-xchain-widget/store/data/index.ts" />
 declare module "@scom/scom-xchain-widget/store/data/index.ts" {
     export * from "@scom/scom-xchain-widget/store/data/core.ts";
     export { SupportedERC20Tokens } from "@scom/scom-xchain-widget/store/data/tokens/index.ts";
-    export { dummyAddressList } from "@scom/scom-xchain-widget/store/data/dummy.ts";
 }
 /// <amd-module name="@scom/scom-xchain-widget/global/helper.ts" />
 declare module "@scom/scom-xchain-widget/global/helper.ts" {
-    import { BigNumber } from "@ijstech/eth-wallet";
     export enum SITE_ENV {
         DEV = "dev",
         TESTNET = "testnet",
@@ -153,44 +147,25 @@ declare module "@scom/scom-xchain-widget/global/helper.ts" {
     export const DefaultDateTimeFormat = "DD/MM/YYYY HH:mm:ss";
     export const DefaultDateFormat = "DD/MM/YYYY";
     export const formatDate: (date: any, customType?: string, showTimezone?: boolean) => string;
-    export const formatUTCDate: (date: any, customType?: string, showTimezone?: boolean) => string;
-    export const compareDate: (fromDate: any, toDate?: any) => boolean;
     export const formatNumber: (value: any, decimals?: number, options?: {
         min?: number;
         sign?: string;
     }) => string;
-    export const formatPercentNumber: (value: any, decimals?: number) => string;
     export const formatNumberWithSeparators: (value: number, precision?: number) => string;
     export const isInvalidInput: (val: any) => boolean;
     export const limitInputNumber: (input: any, decimals: number) => void;
     export const limitDecimals: (value: any, decimals: number) => any;
     export function getAPI(url: string, paramsObj?: any): Promise<any>;
-    export const toWeiInv: (n: string, unit?: number) => BigNumber;
-    export const padLeft: (string: string, chars: number, sign?: string) => string;
-    export const numberToBytes32: (value: any, prefix?: string) => any;
-    export const getParamsFromUrl: () => URLSearchParams;
-    export const uniqWith: (array: any[], compareFn: (cur: any, oth: any) => boolean) => any;
-    export const getWeekDays: () => any[];
     export const showResultMessage: (result: any, status: 'warning' | 'success' | 'error', content?: string | Error) => void;
-    export function flatMap<T, U>(array: T[], callback: (item: T) => U[]): U[];
-}
-/// <amd-module name="@scom/scom-xchain-widget/global/error.ts" />
-declare module "@scom/scom-xchain-widget/global/error.ts" {
-    export function parseContractError(oMessage: string, tokens: string[]): Promise<string>;
 }
 /// <amd-module name="@scom/scom-xchain-widget/global/common.ts" />
 declare module "@scom/scom-xchain-widget/global/common.ts" {
-    import { BigNumber, ISendTxEventsOptions } from "@ijstech/eth-wallet";
+    import { ISendTxEventsOptions } from "@ijstech/eth-wallet";
     import { ITokenObject } from "@scom/scom-token-list";
     export type TokenMapType = {
         [token: string]: ITokenObject;
     };
-    export const ERC20MaxAmount: BigNumber;
-    export const isTransactionConfirmed: (txHash: string) => Promise<boolean>;
     export const registerSendTxEvents: (sendTxEventHandlers: ISendTxEventsOptions) => void;
-    export const approveERC20Max: (token: ITokenObject, spenderAddress: string, callback?: any, confirmationCallback?: any) => Promise<import("@ijstech/eth-contract").TransactionReceipt>;
-    export const getERC20Allowance: (token: ITokenObject, spenderAddress: string) => Promise<BigNumber>;
-    export const isAddressValid: (address: string) => Promise<any>;
 }
 /// <amd-module name="@scom/scom-xchain-widget/global/index.ts" />
 declare module "@scom/scom-xchain-widget/global/index.ts" {
@@ -214,22 +189,10 @@ declare module "@scom/scom-xchain-widget/global/index.ts" {
         ShowExpertModal = "showExpertModal",
         ShowTransactionModal = "showTransactionModal",
         SlippageToleranceChanged = "slippageToleranceChanged",
-        ExpertModeChanged = "expertModeChanged",
-        ShowResult = "showResult",
-        SetResultMessage = "setResultMessage",
-        ShowBondModal = "ShowBondModal",
-        ChangeSeletedImage = "ChangeSeletedImage",
-        EmitFocusField = "emitFocusField",
-        EmitFieldChange = "emitFieldChange",
-        ShowActionQueueModal = "showActionQueueModal",
-        EmitButtonStatus = "emitButtonStatus",
-        EmitNewToken = "emitNewToken",
-        ChangedGovState = "changedGovState",
-        ChangedProposalList = "changedProposalList"
+        ExpertModeChanged = "expertModeChanged"
     }
-    export { getAPI, formatNumber, formatNumberWithSeparators, DefaultDateTimeFormat, DefaultDateFormat, formatDate, formatUTCDate, limitDecimals, limitInputNumber, isInvalidInput, toWeiInv, numberToBytes32, getParamsFromUrl, uniqWith, getWeekDays, compareDate, formatPercentNumber, SITE_ENV, showResultMessage, flatMap } from "@scom/scom-xchain-widget/global/helper.ts";
-    export { parseContractError } from "@scom/scom-xchain-widget/global/error.ts";
-    export { isTransactionConfirmed, registerSendTxEvents, approveERC20Max, getERC20Allowance, TokenMapType, isAddressValid, ERC20MaxAmount, } from "@scom/scom-xchain-widget/global/common.ts";
+    export { getAPI, formatNumber, formatNumberWithSeparators, DefaultDateTimeFormat, DefaultDateFormat, formatDate, limitDecimals, limitInputNumber, isInvalidInput, SITE_ENV, showResultMessage } from "@scom/scom-xchain-widget/global/helper.ts";
+    export { registerSendTxEvents, TokenMapType } from "@scom/scom-xchain-widget/global/common.ts";
 }
 /// <amd-module name="@scom/scom-xchain-widget/data.json.ts" />
 declare module "@scom/scom-xchain-widget/data.json.ts" {
@@ -485,14 +448,8 @@ declare module "@scom/scom-xchain-widget/store/index.ts" {
     import { State } from "@scom/scom-xchain-widget/store/utils.ts";
     export * from "@scom/scom-xchain-widget/store/data/index.ts";
     export const nullAddress = "0x0000000000000000000000000000000000000000";
-    export const getTokenDecimals: (address: string, chainId: number) => number;
     export const getTokenIcon: (address: string, chainId: number) => string;
-    export const tokenSymbol: (address: string, chainId: number) => string;
-    export const tokenName: (address: string, chainId: number) => string;
     export const getNetworkImg: (state: State, chainId: number) => string;
-    export const getEmbedLink: (dataUri: string, params?: {
-        [key: string]: string;
-    }) => string;
     export function findConstantTokenByVault(chainId: number, vaultAddress: string): import("@scom/scom-xchain-widget/store/data/core.ts").TokenConstant;
     export function findConstantVaultGroupByToken(chainId: number, tokenAddress: string): VaultGroupConstant;
     export function findConstantVault(vaultGroup: VaultGroupConstant, chainId: number): VaultConstant;
@@ -1089,30 +1046,11 @@ declare module "@scom/scom-xchain-widget/formSchema.ts" {
                     required: boolean;
                     items: {
                         type: string;
+                        maxItems: number;
                         properties: {
                             chainId: {
                                 type: string;
-                                enum: ({
-                                    chainId: number;
-                                    isMainChain: boolean;
-                                    isCrossChainSupported: boolean;
-                                    isTestnet?: undefined;
-                                } | {
-                                    chainId: number;
-                                    isMainChain: boolean;
-                                    isCrossChainSupported: boolean;
-                                    isTestnet: boolean;
-                                } | {
-                                    chainId: number;
-                                    isCrossChainSupported: boolean;
-                                    isTestnet: boolean;
-                                    isMainChain?: undefined;
-                                } | {
-                                    chainId: number;
-                                    isCrossChainSupported: boolean;
-                                    isMainChain?: undefined;
-                                    isTestnet?: undefined;
-                                })[];
+                                enum: number[];
                                 required: boolean;
                             };
                         };
@@ -1126,27 +1064,7 @@ declare module "@scom/scom-xchain-widget/formSchema.ts" {
                         properties: {
                             chainId: {
                                 type: string;
-                                enum: ({
-                                    chainId: number;
-                                    isMainChain: boolean;
-                                    isCrossChainSupported: boolean;
-                                    isTestnet?: undefined;
-                                } | {
-                                    chainId: number;
-                                    isMainChain: boolean;
-                                    isCrossChainSupported: boolean;
-                                    isTestnet: boolean;
-                                } | {
-                                    chainId: number;
-                                    isCrossChainSupported: boolean;
-                                    isTestnet: boolean;
-                                    isMainChain?: undefined;
-                                } | {
-                                    chainId: number;
-                                    isCrossChainSupported: boolean;
-                                    isMainChain?: undefined;
-                                    isTestnet?: undefined;
-                                })[];
+                                enum: number[];
                                 required: boolean;
                             };
                             address: {
@@ -1289,7 +1207,7 @@ declare module "@scom/scom-xchain-widget/formSchema.ts" {
                 }[];
             })[];
         };
-        customControls(rpcWalletId: string): {
+        customControls(): {
             '#/properties/networks/properties/chainId': {
                 render: () => ScomNetworkPicker;
                 getData: (control: ScomNetworkPicker) => number;

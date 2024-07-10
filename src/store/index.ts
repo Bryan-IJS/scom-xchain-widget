@@ -1,17 +1,10 @@
 import { VaultConstant, VaultGroupConstant, VaultGroupList } from './data/index';
 import { assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
-import { getAddresses, getChainNativeToken, isWalletConnected, State } from './utils';
+import { getChainNativeToken, isWalletConnected, State } from './utils';
 
 export * from './data/index'
 
 export const nullAddress = "0x0000000000000000000000000000000000000000";
-
-export const getTokenDecimals = (address: string, chainId: number) => {
-  const Address = getAddresses(chainId);
-  const ChainNativeToken = getChainNativeToken(chainId);
-  const tokenObject = (!address || address.toLowerCase() === Address['WETH9'].toLowerCase()) ? ChainNativeToken : tokenStore.getTokenMapByChainId(chainId)?.[address.toLowerCase()];
-  return tokenObject ? tokenObject.decimals : 18;
-}
 
 export const getTokenIcon = (address: string, chainId: number) => {
   if (!address) return '';
@@ -27,24 +20,6 @@ export const getTokenIcon = (address: string, chainId: number) => {
   return tokenAssets.tokenPath(tokenObject, chainId);
 }
 
-export const tokenSymbol = (address: string, chainId: number) => {
-  const tokenMap = tokenStore.getTokenMapByChainId(chainId);
-  if (!address || !tokenMap) return '';
-  const nativeToken = getChainNativeToken(chainId);
-  let tokenObject = nativeToken.symbol.toLowerCase() === address.toLowerCase() ? nativeToken : tokenMap[address.toLowerCase()];
-  if (!tokenObject) tokenObject = tokenMap[address];
-  return tokenObject ? tokenObject.symbol : '';
-}
-
-export const tokenName = (address: string, chainId: number) => {
-  const tokenMap = tokenStore.getTokenMapByChainId(chainId);
-  if (!address || !tokenMap) return '';
-  const nativeToken = getChainNativeToken(chainId);
-  let tokenObject = nativeToken.symbol.toLowerCase() === address.toLowerCase() ? nativeToken : tokenMap[address.toLowerCase()];
-  if (!tokenObject) tokenObject = tokenMap[address];
-  return tokenObject?.name || '';
-}
-
 export const getNetworkImg = (state: State, chainId: number) => {
   try {
     const network = state.getNetworkInfo(chainId);
@@ -53,13 +28,6 @@ export const getNetworkImg = (state: State, chainId: number) => {
     }
   } catch { }
   return tokenAssets.fallbackUrl;
-}
-
-const EMBED_URL = "https://embed.scom.page/#/";
-export const getEmbedLink = (dataUri: string, params?: { [key: string]: string }) => {
-  let queries = new URLSearchParams(params).toString();
-  let url = `${EMBED_URL}${dataUri}${queries ? "?" + queries : ""}`;
-  return url;
 }
 
 export function findConstantTokenByVault(chainId: number, vaultAddress: string) {

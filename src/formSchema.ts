@@ -1,12 +1,10 @@
-import { Button, Input, StackLayout, Styles } from '@ijstech/components';
 import ScomNetworkPicker from '@scom/scom-network-picker';
 import ScomTokenInput from '@scom/scom-token-input';
 import { SupportedERC20Tokens } from './store/index';
 import Config from './data.json';
 
-const Theme = Styles.Theme.ThemeVars;
-const chainIds = Config.supportedNetworks || [];
-const networks = chainIds.map(v => { return { chainId: v.chainId } });
+const chainIds = (Config.supportedNetworks || []).map(v => v.chainId);
+const networks = chainIds.map(v => { return { chainId: v } });
 
 const theme = {
     type: 'object',
@@ -206,6 +204,7 @@ export function getBuilderSchema() {
                     required: true,
                     items: {
                         type: 'object',
+                        maxItems: chainIds.length,
                         properties: {
                             chainId: {
                                 type: 'number',
@@ -283,7 +282,7 @@ export function getBuilderSchema() {
                 themeUISchema
             ]
         },
-        customControls(rpcWalletId: string) {
+        customControls() {
             let networkPickers: ScomNetworkPicker[] = [];
             let tokenInputs: ScomTokenInput[] = [];
             return {
