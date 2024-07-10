@@ -336,7 +336,8 @@ export function getBuilderSchema() {
                             type: 'combobox',
                             isBalanceShown: false,
                             isBtnMaxShown: false,
-                            isInputShown: false
+                            isInputShown: false,
+                            supportValidAddress: true
                         });
                         const chainId = networkPickers[idx]?.selectedNetwork?.chainId;
                         tokenInputs[idx].chainId = chainId;

@@ -4099,7 +4099,8 @@ define("@scom/scom-xchain-widget/formSchema.ts", ["require", "exports", "@scom/s
                                 type: 'combobox',
                                 isBalanceShown: false,
                                 isBtnMaxShown: false,
-                                isInputShown: false
+                                isInputShown: false,
+                                supportValidAddress: true
                             });
                             const chainId = networkPickers[idx]?.selectedNetwork?.chainId;
                             tokenInputs[idx].chainId = chainId;
