@@ -30,7 +30,6 @@ export const swapStyle = Styles.style({
     },
     '#swapContainer i-button:not(.disabled):hover': {
       transition: 'all .2s ease-out',
-      background: 'linear-gradient(255deg,#f15e61,#b52082)'
     },
     '#swapContainer i-button:focus': {
       outline: 0,
@@ -127,6 +126,27 @@ export const swapStyle = Styles.style({
     'i-label.text--limit *': {
       color: `${Theme.colors.secondary.main} !important`
     },
+    '.btn-os': {
+      background: 'var(--primary-button-background)',
+      transition: 'background .3s ease'
+    },
+    '.btn-os:not(.disabled):not(.is-spinning):hover, .btn-os:not(.disabled):not(.is-spinning):focus': {
+      background: 'var(--primary-button-hover-background)',
+      boxShadow: 'none',
+      opacity: .9
+    },
+    '.btn-os:not(.disabled):not(.is-spinning):focus': {
+      boxShadow: '0 0 0 0.2rem rgb(0 123 255 / 25%)',
+      outline: 0
+    },
+    '.btn-os.disabled, .btn-os.is-spinning': {
+      background: 'var(--primary-button-disabled-background)',
+      opacity: 0.4
+    },
+    '.btn-max:not(.disabled):hover': {
+      transition: 'all .2s ease-out',
+      background: 'var(--max-button-hover-background)'
+    },
     '.btn-max': {
       position: 'relative',
       borderRadius: '0.5rem',
@@ -134,7 +154,7 @@ export const swapStyle = Styles.style({
       padding: '0 0.5rem',
       marginLeft: '0.5rem',
       bottom: '1.5px',
-      background: 'transparent linear-gradient(255deg,#e75b66,#b52082) 0% 0% no-repeat padding-box',
+      background: 'var(--max-button-background)',
       color: Theme.text.primary
     },
     '.bg-box': {
@@ -478,7 +498,7 @@ export const swapStyle = Styles.style({
         },
         '.btn-cancel': {
           background: '#eaecef',
-          color: Theme.background.default,
+          color: `${Theme.background.default} !important`,
           $nest: {
             '&:hover': {
               background: '#eaecef !important',
