@@ -4163,7 +4163,6 @@ define("@scom/scom-xchain-widget/index.css.ts", ["require", "exports", "@ijstech
             },
             '#swapContainer i-button:not(.disabled):hover': {
                 transition: 'all .2s ease-out',
-                background: 'linear-gradient(255deg,#f15e61,#b52082)'
             },
             '#swapContainer i-button:focus': {
                 outline: 0,
