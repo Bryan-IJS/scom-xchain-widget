@@ -46,7 +46,6 @@ import {
   getVaultGroups,
   getCommissionRate,
 } from './crosschain-utils/index';
-import Assets from './assets';
 import { PriceInfo } from './price-info/index';
 import ScomCommissionFeeSetup from '@scom/scom-commission-fee-setup';
 import ScomTokenInput from '@scom/scom-token-input';
@@ -60,6 +59,7 @@ import { BridgeRecord } from './bridge-record/index';
 import { getBuilderSchema, getProjectOwnerSchema } from './formSchema';
 import { swapStyle, tabStyle } from './index.css';
 import configData from './data.json';
+import { Block, BlockNoteEditor, BlockNoteSpecs, callbackFnType, executeFnType, getWidgetEmbedUrl, parseUrl } from '@scom/scom-blocknote-sdk';
 
 const Theme = Styles.Theme.ThemeVars;
 
@@ -122,7 +122,7 @@ declare const window: any;
 
 @customModule
 @customElements('i-scom-xchain-widget')
-export default class ScomXchainWidget extends Module {
+export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   private tabs: Tabs;
   private swapContainer: Container;
   private pnlBridgeRecord: Panel;
@@ -164,16 +164,16 @@ export default class ScomXchainWidget extends Module {
   private record: Route;
   private chainId: number;
   @observable()
-  private swapButtonText: string;
+  private swapButtonText: string = '';
   private _lastUpdated: number = 0;
   @observable()
-  private lastUpdatedText: string;
+  private lastUpdatedText: string = '';
   private timer: any;
   private $eventBus: IEventBus;
   @observable()
-  private estimateMsg: string;
+  private estimateMsg: string = '';
   @observable()
-  private payOrReceiveText: string;
+  private payOrReceiveText: string = '';
   private approvalModelAction: IERC20ApprovalAction;
 
   // Cross Chain
@@ -239,6 +239,124 @@ export default class ScomXchainWidget extends Module {
   constructor(parent?: Container, options?: any) {
     super(parent, options);
     this.deferReadyCallback = true;
+  }
+
+  addBlock(blocknote: any, executeFn: executeFnType, callbackFn?: callbackFnType) {
+    const blockType = 'xchain';
+    const moduleData = {
+      name: "@scom/scom-xchain-widget",
+      localPath: "scom-xchain-widget"
+    }
+
+    function getData(href: string) {
+      const widgetData = parseUrl(href);
+      if (widgetData) {
+        const { module, properties } = widgetData;
+        if (module.localPath === moduleData.localPath) return { ...properties };
+      }
+      return false;
+    }
+
+    const XchainBlock = blocknote.createBlockSpec({
+      type: blockType,
+      propSchema: {
+        ...blocknote.defaultProps,
+        tokens: { default: [] },
+        defaultChainId: { default: 0 },
+        networks: { default: [] },
+        wallets: { default: [] },
+        commissions: { default: [] },
+        defaultInputToken: { default: null },
+      },
+      content: "none"
+    },
+    {
+      render: (block: Block) => {
+        const wrapper = new Panel();
+        const props = JSON.parse(JSON.stringify(block.props));
+        const customElm = new ScomXchainWidget(wrapper, { ...props });
+        if (typeof callbackFn === 'function') callbackFn(customElm, block);
+        wrapper.appendChild(customElm);
+        return {
+          dom: wrapper
+        };
+      },
+      parseFn: () => {
+        return [
+          {
+            tag: `div[data-content-type=${blockType}]`,
+            node: blockType
+          },
+          {
+            tag: "a",
+            getAttrs: (element: string | HTMLElement) => {
+              if (typeof element === "string") {
+                return false;
+              }
+              const href = element.getAttribute('href');
+              if (href) return getData(href);
+              return false;
+            },
+            priority: 402,
+            node: blockType
+          },
+          {
+            tag: "p",
+            getAttrs: (element: string | HTMLElement) => {
+              if (typeof element === "string") {
+                return false;
+              }
+              const child = element.firstChild as HTMLElement;
+              if (child?.nodeName === 'A' && child.getAttribute('href')) {
+                const href = child.getAttribute('href');
+                return getData(href);
+              }
+              return false;
+            },
+            priority: 403,
+            node: blockType
+          },
+        ]
+      },
+      toExternalHTML: (block: any, editor: any) => {
+        const link = document.createElement("a");
+        const url = getWidgetEmbedUrl(
+          {
+            type: blockType,
+            props: { ...(block.props || {}) }
+          },
+          moduleData
+        );
+        link.setAttribute("href", url);
+        link.textContent = blockType;
+        const wrapper = document.createElement("p");
+        wrapper.appendChild(link);
+        return { dom: wrapper };
+      }
+    });
+
+    const XchainSlashItem = {
+      name: "Xchain",
+      execute: (editor: BlockNoteEditor) => {
+        const block: any = {
+          type: blockType,
+          props: configData.defaultBuilderData
+        };
+        if (typeof executeFn === 'function') {
+          executeFn(editor, block);
+        }
+      },
+      aliases: [blockType, "widget"],
+      group: "Widget",
+      icon: {name: 'exchange-alt'},
+      hint: "Insert an xchain widget",
+    }
+
+    return {
+      block: XchainBlock,
+      slashItem: XchainSlashItem,
+      moduleData
+    }
   }
 
   removeRpcWalletEvents() {

@@ -18,6 +18,7 @@
         "@scom/scom-tx-status-modal",
         "@scom/scom-multicall",
         "@scom/scom-dapp-container",
-        "@scom/scom-wallet-modal"
+        "@scom/scom-wallet-modal",
+        "@scom/scom-blocknote-sdk"
     ]
 }

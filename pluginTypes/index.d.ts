@@ -704,6 +704,8 @@ declare module "@scom/scom-xchain-widget/crosschain-utils/index.ts" {
     export const getCommissionRate: (state: State, campaignId: number) => Promise<string>;
     export * from "@scom/scom-xchain-widget/crosschain-utils/API.ts";
 }
+/// <amd-module name="@scom/scom-xchain-widget/price-info/index.css.ts" />
+declare module "@scom/scom-xchain-widget/price-info/index.css.ts" { }
 /// <amd-module name="@scom/scom-xchain-widget/assets.ts" />
 declare module "@scom/scom-xchain-widget/assets.ts" {
     function fullPath(path: string): string;
@@ -712,8 +714,6 @@ declare module "@scom/scom-xchain-widget/assets.ts" {
     };
     export default _default_1;
 }
-/// <amd-module name="@scom/scom-xchain-widget/price-info/index.css.ts" />
-declare module "@scom/scom-xchain-widget/price-info/index.css.ts" { }
 /// <amd-module name="@scom/scom-xchain-widget/price-info/index.tsx" />
 declare module "@scom/scom-xchain-widget/price-info/index.tsx" {
     import { Module, Control, ControlElement, Image, Icon, Container } from '@ijstech/components';
@@ -1237,6 +1237,7 @@ declare module "@scom/scom-xchain-widget" {
     import { Module, Container, ControlElement } from '@ijstech/components';
     import ScomCommissionFeeSetup from '@scom/scom-commission-fee-setup';
     import { IWalletPlugin } from '@scom/scom-wallet-modal';
+    import { BlockNoteEditor, BlockNoteSpecs, callbackFnType, executeFnType } from '@scom/scom-blocknote-sdk';
     export enum ApprovalStatus {
         TO_BE_APPROVED = 0,
         APPROVING = 1,
@@ -1282,7 +1283,7 @@ declare module "@scom/scom-xchain-widget" {
             }
         }
     }
-    export default class ScomXchainWidget extends Module {
+    export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
         private tabs;
         private swapContainer;
         private pnlBridgeRecord;
@@ -1380,6 +1381,23 @@ declare module "@scom/scom-xchain-widget" {
         tag: any;
         private _tokens;
         constructor(parent?: Container, options?: any);
+        addBlock(blocknote: any, executeFn: executeFnType, callbackFn?: callbackFnType): {
+            block: any;
+            slashItem: {
+                name: string;
+                execute: (editor: BlockNoteEditor) => void;
+                aliases: string[];
+                group: string;
+                icon: {
+                    name: string;
+                };
+                hint: string;
+            };
+            moduleData: {
+                name: string;
+                localPath: string;
+            };
+        };
         removeRpcWalletEvents(): void;
         onHide(): void;
         private get isInsufficientBalance();

@@ -1527,22 +1527,11 @@ define("@scom/scom-xchain-widget/crosschain-utils/index.ts", ["require", "export
     exports.getCommissionRate = getCommissionRate;
     __exportStar(API_1, exports);
 });
-define("@scom/scom-xchain-widget/assets.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_3) {
+define("@scom/scom-xchain-widget/price-info/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    let moduleDir = components_3.application.currentModuleDir;
-    function fullPath(path) {
-        return `${moduleDir}/${path}`;
-    }
-    exports.default = {
-        fullPath
-    };
-});
-define("@scom/scom-xchain-widget/price-info/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_4) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    const Theme = components_4.Styles.Theme.ThemeVars;
-    components_4.Styles.cssRule('.price-info', {
+    const Theme = components_3.Styles.Theme.ThemeVars;
+    components_3.Styles.cssRule('.price-info', {
         display: 'flex',
         flexDirection: 'column',
         opacity: 0.75,
@@ -1557,6 +1546,17 @@ define("@scom/scom-xchain-widget/price-info/index.css.ts", ["require", "exports"
             }
         }
     });
+});
+define("@scom/scom-xchain-widget/assets.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_4) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    let moduleDir = components_4.application.currentModuleDir;
+    function fullPath(path) {
+        return `${moduleDir}/${path}`;
+    }
+    exports.default = {
+        fullPath
+    };
 });
 define("@scom/scom-xchain-widget/price-info/index.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-xchain-widget/assets.ts", "@scom/scom-xchain-widget/price-info/index.css.ts"], function (require, exports, components_5, assets_1) {
     "use strict";
@@ -4701,8 +4701,9 @@ define("@scom/scom-xchain-widget/index.css.ts", ["require", "exports", "@ijstech
         }
     });
 });
-define("@scom/scom-xchain-widget", ["require", "exports", "@ijstech/components", "@ijstech/eth-wallet", "@scom/scom-xchain-widget/store/index.ts", "@scom/scom-xchain-widget/global/index.ts", "@scom/scom-xchain-widget/crosschain-utils/index.ts", "@scom/scom-xchain-widget/price-info/index.tsx", "@scom/scom-commission-fee-setup", "@scom/scom-token-list", "@scom/scom-xchain-widget/expert-mode-settings/index.tsx", "@scom/scom-xchain-widget/transaction-settings/index.tsx", "@scom/scom-xchain-widget/bridge-record/index.tsx", "@scom/scom-xchain-widget/formSchema.ts", "@scom/scom-xchain-widget/index.css.ts", "@scom/scom-xchain-widget/data.json.ts"], function (require, exports, components_16, eth_wallet_8, index_16, index_17, index_18, index_19, scom_commission_fee_setup_1, scom_token_list_6, index_20, index_21, index_22, formSchema_1, index_css_4, data_json_3) {
+define("@scom/scom-xchain-widget", ["require", "exports", "@ijstech/components", "@ijstech/eth-wallet", "@scom/scom-xchain-widget/store/index.ts", "@scom/scom-xchain-widget/global/index.ts", "@scom/scom-xchain-widget/crosschain-utils/index.ts", "@scom/scom-xchain-widget/price-info/index.tsx", "@scom/scom-commission-fee-setup", "@scom/scom-token-list", "@scom/scom-xchain-widget/expert-mode-settings/index.tsx", "@scom/scom-xchain-widget/transaction-settings/index.tsx", "@scom/scom-xchain-widget/bridge-record/index.tsx", "@scom/scom-xchain-widget/formSchema.ts", "@scom/scom-xchain-widget/index.css.ts", "@scom/scom-xchain-widget/data.json.ts", "@scom/scom-blocknote-sdk"], function (require, exports, components_16, eth_wallet_8, index_16, index_17, index_18, index_19, scom_commission_fee_setup_1, scom_token_list_6, index_20, index_21, index_22, formSchema_1, index_css_4, data_json_3, scom_blocknote_sdk_1) {
     "use strict";
+    var ScomXchainWidget_1;
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ApprovalStatus = void 0;
     const Theme = components_16.Styles.Theme.ThemeVars;
@@ -4714,10 +4715,14 @@ define("@scom/scom-xchain-widget", ["require", "exports", "@ijstech/components",
     })(ApprovalStatus = exports.ApprovalStatus || (exports.ApprovalStatus = {}));
     const defaultInput = '1';
     const ROUNDING_NUMBER = eth_wallet_8.BigNumber.ROUND_DOWN;
-    let ScomXchainWidget = class ScomXchainWidget extends components_16.Module {
+    let ScomXchainWidget = ScomXchainWidget_1 = class ScomXchainWidget extends components_16.Module {
         constructor(parent, options) {
             super(parent, options);
+            this.swapButtonText = '';
             this._lastUpdated = 0;
+            this.lastUpdatedText = '';
+            this.estimateMsg = '';
+            this.payOrReceiveText = '';
             // Cross Chain
             this.crossChainApprovalStatus = ApprovalStatus.NONE;
             this.oldSupportedChainList = [];
@@ -5204,6 +5209,118 @@ define("@scom/scom-xchain-widget", ["require", "exports", "@ijstech/components",
                 return tokenObjArr;
             };
             this.deferReadyCallback = true;
+        }
+        addBlock(blocknote, executeFn, callbackFn) {
+            const blockType = 'xchain';
+            const moduleData = {
+                name: "@scom/scom-xchain-widget",
+                localPath: "scom-xchain-widget"
+            };
+            function getData(href) {
+                const widgetData = (0, scom_blocknote_sdk_1.parseUrl)(href);
+                if (widgetData) {
+                    const { module, properties } = widgetData;
+                    if (module.localPath === moduleData.localPath)
+                        return { ...properties };
+                }
+                return false;
+            }
+            const XchainBlock = blocknote.createBlockSpec({
+                type: blockType,
+                propSchema: {
+                    ...blocknote.defaultProps,
+                    tokens: { default: [] },
+                    defaultChainId: { default: 0 },
+                    networks: { default: [] },
+                    wallets: { default: [] },
+                    commissions: { default: [] },
+                    defaultInputToken: { default: null },
+                },
+                content: "none"
+            }, {
+                render: (block) => {
+                    const wrapper = new components_16.Panel();
+                    const props = JSON.parse(JSON.stringify(block.props));
+                    const customElm = new ScomXchainWidget_1(wrapper, { ...props });
+                    if (typeof callbackFn === 'function')
+                        callbackFn(customElm, block);
+                    wrapper.appendChild(customElm);
+                    return {
+                        dom: wrapper
+                    };
+                },
+                parseFn: () => {
+                    return [
+                        {
+                            tag: `div[data-content-type=${blockType}]`,
+                            node: blockType
+                        },
+                        {
+                            tag: "a",
+                            getAttrs: (element) => {
+                                if (typeof element === "string") {
+                                    return false;
+                                }
+                                const href = element.getAttribute('href');
+                                if (href)
+                                    return getData(href);
+                                return false;
+                            },
+                            priority: 402,
+                            node: blockType
+                        },
+                        {
+                            tag: "p",
+                            getAttrs: (element) => {
+                                if (typeof element === "string") {
+                                    return false;
+                                }
+                                const child = element.firstChild;
+                                if (child?.nodeName === 'A' && child.getAttribute('href')) {
+                                    const href = child.getAttribute('href');
+                                    return getData(href);
+                                }
+                                return false;
+                            },
+                            priority: 403,
+                            node: blockType
+                        },
+                    ];
+                },
+                toExternalHTML: (block, editor) => {
+                    const link = document.createElement("a");
+                    const url = (0, scom_blocknote_sdk_1.getWidgetEmbedUrl)({
+                        type: blockType,
+                        props: { ...(block.props || {}) }
+                    }, moduleData);
+                    link.setAttribute("href", url);
+                    link.textContent = blockType;
+                    const wrapper = document.createElement("p");
+                    wrapper.appendChild(link);
+                    return { dom: wrapper };
+                }
+            });
+            const XchainSlashItem = {
+                name: "Xchain",
+                execute: (editor) => {
+                    const block = {
+                        type: blockType,
+                        props: data_json_3.default.defaultBuilderData
+                    };
+                    if (typeof executeFn === 'function') {
+                        executeFn(editor, block);
+                    }
+                },
+                aliases: [blockType, "widget"],
+                group: "Widget",
+                icon: { name: 'exchange-alt' },
+                hint: "Insert an xchain widget",
+            };
+            return {
+                block: XchainBlock,
+                slashItem: XchainSlashItem,
+                moduleData
+            };
         }
         removeRpcWalletEvents() {
             const rpcWallet = this.state.getRpcWallet();
@@ -6434,7 +6551,7 @@ define("@scom/scom-xchain-widget", ["require", "exports", "@ijstech/components",
     __decorate([
         (0, components_16.observable)()
     ], ScomXchainWidget.prototype, "payOrReceiveText", void 0);
-    ScomXchainWidget = __decorate([
+    ScomXchainWidget = ScomXchainWidget_1 = __decorate([
         components_16.customModule,
         (0, components_16.customElements)('i-scom-xchain-widget')
     ], ScomXchainWidget);
