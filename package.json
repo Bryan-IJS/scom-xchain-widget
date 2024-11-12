@@ -15,10 +15,13 @@
         "test": "cd test && npm run test && cd .."
     },
     "keywords": [],
+    "dependencies": {
+        "@ijstech/components": "^0.1.108",
+        "@scom/scom-blocknote-sdk": "^0.1.2"
+    },
     "devDependencies": {
         "@ijstech/cli": "^0.1.33",
         "@ijstech/compiler": "^0.1.76",
-        "@ijstech/components": "^0.1.108",
         "@ijstech/eth-contract": "^0.1.25",
         "@ijstech/eth-wallet": "^0.1.94",
         "@ijstech/eth-wallet-web3modal": "^0.2.0",
