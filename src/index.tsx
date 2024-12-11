@@ -17,7 +17,8 @@ import {
   VStack,
   ControlElement,
   customElements,
-  Tabs
+  Tabs,
+  Tab
 } from '@ijstech/components';
 import { BigNumber, Constants, IERC20ApprovalAction, Wallet } from '@ijstech/eth-wallet';
 import {
@@ -43,23 +44,28 @@ import {
   findVaultGroupByToken,
   Route,
   getBond,
-  getVaultGroups,
-  getCommissionRate,
+  getVaultGroups
 } from './crosschain-utils/index';
 import { PriceInfo } from './price-info/index';
-import ScomCommissionFeeSetup from '@scom/scom-commission-fee-setup';
 import ScomTokenInput from '@scom/scom-token-input';
 import ScomTxStatusModal from '@scom/scom-tx-status-modal';
 import ScomDappContainer from '@scom/scom-dapp-container'
-import { tokenStore, assets as tokenAssets, ITokenObject, ChainNativeTokenByChainId } from '@scom/scom-token-list';
+import { tokenStore, assets as tokenAssets, ITokenObject } from '@scom/scom-token-list';
 import ScomWalletModal, { IWalletPlugin } from '@scom/scom-wallet-modal';
 import { ExpertModeSettings } from './expert-mode-settings/index';
 import { TransactionSettings } from './transaction-settings/index';
 import { BridgeRecord } from './bridge-record/index';
-import { getBuilderSchema, getProjectOwnerSchema } from './formSchema';
 import { swapStyle, tabStyle } from './index.css';
 import configData from './data.json';
 import { Block, BlockNoteEditor, BlockNoteSpecs, callbackFnType, executeFnType, getWidgetEmbedUrl, parseUrl } from '@scom/scom-blocknote-sdk';
+import { mainJson } from './languages/index';
+import {
+  IXchainWidgetData,
+  ICommissionInfo,
+  INetworkConfig,
+  ITokenConfig
+} from './global/index';
+import { ConfigModel, XchainModel } from './model/index';
 
 const Theme = Styles.Theme.ThemeVars;
 
@@ -69,23 +75,7 @@ export enum ApprovalStatus {
   NONE,
 }
 
-interface ICommissionInfo {
-  chainId: number;
-  walletAddress: string;
-}
-
-interface INetworkConfig {
-  chainName?: string;
-  chainId: number;
-}
-
-interface ITokenConfig {
-  chainId: number;
-  address?: string;
-}
-
 const defaultInput = '1';
-const ROUNDING_NUMBER = BigNumber.ROUND_DOWN;
 
 interface ScomXchainWidgetElement extends ControlElement {
   campaignId?: number;
@@ -96,17 +86,6 @@ interface ScomXchainWidgetElement extends ControlElement {
   wallets: IWalletPlugin[];
   showHeader?: boolean;
   commissions?: ICommissionInfo[];
-  defaultInputToken?: ITokenConfig;
-}
-
-export interface IXchainWidgetData {
-  campaignId?: number;
-  commissions?: ICommissionInfo[];
-  tokens?: ITokenConfig[];
-  defaultChainId: number;
-  wallets: IWalletPlugin[];
-  networks: INetworkConfig[];
-  showHeader?: boolean;
   defaultInputToken?: ITokenConfig;
 }
 
@@ -124,6 +103,8 @@ declare const window: any;
 @customElements('i-scom-xchain-widget')
 export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   private tabs: Tabs;
+  private brigeRecordTab: Tab;
+  private swapTab: Tab;
   private swapContainer: Container;
   private pnlBridgeRecord: Panel;
   private receiveContainer: Panel;
@@ -149,20 +130,13 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   private maxButton: Button;
   private swapBtn: Button;
   private actionSetting: Panel;
-  private lbSwitchNetwork: Label;
-  private urlParams: URLSearchParams;
 
-  private isFrom: boolean;
-  private fromToken?: ITokenObject;
-  private toToken?: ITokenObject;
   private fromTokenSymbol: string;
   private toTokenSymbol: string;
-  private fromInputValue: BigNumber;
-  private toInputValue: BigNumber;
   private timeout: any;
   private isPriceToggled: boolean;
-  private record: Route;
-  private chainId: number;
+  private configModel: ConfigModel;
+  private xchainModel: XchainModel;
   @observable()
   private swapButtonText: string = '';
   private _lastUpdated: number = 0;
@@ -179,11 +153,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   // Cross Chain
   private crossChainApprovalStatus: ApprovalStatus = ApprovalStatus.NONE;
   private oldSupportedChainList: IExtendedNetwork[] = [];
-  private supportedChainList: IExtendedNetwork[] = [];
   private minSwapHintLabel: Label;
-  private srcChain: IExtendedNetwork | undefined;
-  private desChain: IExtendedNetwork | undefined;
-  private targetChainId: number | undefined;
   private srcChainFirstPanel: Panel;
   private targetChainFirstPanel: Panel;
   private srcChainTokenImage: Image;
@@ -207,7 +177,8 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   // private modalViewOrder: Modal;
   private modalFees: Modal;
   private feesInfo: VStack;
-  private lbReminderRejected: Label;
+  private pnlReminderRejected: Panel;
+  private lbReminderRejectedValue: Label;
 
   private btnSourceChain: Button;
   private mdSourceChain: Modal;
@@ -225,20 +196,11 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   private mdWallet: ScomWalletModal;
   private state: State;
   private isInited: boolean = false;
-  private supportedChainIds: number[];
-
-  private _data: IXchainWidgetData = {
-    defaultChainId: 0,
-    wallets: [],
-    tokens: [],
-    networks: []
-  };
   tag: any = {};
-  private _tokens: ITokenObject[] = [];
 
   constructor(parent?: Container, options?: any) {
     super(parent, options);
-    this.deferReadyCallback = true;
+    this.initModels();
   }
 
   addBlock(blocknote: any, executeFn: executeFnType, callbackFn?: callbackFnType) {
@@ -370,320 +332,66 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     this.bridgeRecord?.onHide();
   }
 
-  private get isInsufficientBalance(): boolean {
-    if (!this.fromToken && !this.record) return false;
-    const balance = this.getBalance(this.fromToken);
-    return this.record?.fromAmount && this.record.fromAmount.gt(balance)
-  }
-
   private get lastUpdated(): number {
     return this._lastUpdated
   }
 
   private set lastUpdated(value: number) {
     this._lastUpdated = value;
-    this.lastUpdatedText = `Last updated ${this._lastUpdated}(s) ago`;
-  }
-
-  private get isValidToken(): boolean {
-    try {
-      return !!this.fromToken.symbol && !!this.toToken.symbol;
-    } catch {
-      return false;
-    }
-  }
-
-  private get targetTokenMap() {
-    const chainId = this.desChain?.chainId || this.targetChainId || this.state.getChainId();
-    return tokenStore.getTokenMapByChainId(chainId);
+    this.lastUpdatedText = this.i18n.get('$last_updated_(s)_ago', {value: `${this._lastUpdated}`});
   }
 
   private get defaultTargetChainId() {
-    return this.supportedChainList.find(v => v.chainId !== this.state.getChainId())?.chainId;
+    return this.xchainModel.defaultTargetChainId;
+  }
+
+  private get supportedChainList() {
+    return this.xchainModel.supportedChainList;
   }
 
   get defaultChainId() {
-    return this._data.defaultChainId;
+    return this.configModel.defaultChainId;
   }
 
   set defaultChainId(value: number) {
-    this._data.defaultChainId = value;
+    this.configModel.defaultChainId = value;
   }
 
   get wallets() {
-    return this._data.wallets ?? [];
+    return this.configModel.wallets ?? [];
   }
 
   set wallets(value: IWalletPlugin[]) {
-    this._data.wallets = value;
+    this.configModel.wallets = value;
   }
 
   get networks() {
-    return this._data.networks ?? [];
+    return this.configModel.networks ?? [];
   }
 
   set networks(value: INetworkConfig[]) {
-    this._data.networks = value;
+    this.configModel.networks = value;
   }
 
   get showHeader() {
-    return this._data.showHeader ?? true;
+    return this.configModel.showHeader ?? true;
   }
 
   set showHeader(value: boolean) {
-    this._data.showHeader = value;
+    this.configModel.showHeader = value;
   }
 
   set width(value: string | number) {
     this.resizeBridgeRecord(value);
   }
 
-  private determineActionsByTarget(target: 'builder' | 'projectOwner', category?: string) {
-    if (target === 'builder') {
-      return this.getBuilderActions(category);
-    }
-    else {
-      return this.getProjectOwnerActions();
-    }
-  }
-
-  private async loadCommissionFee() {
-    if (this._data.campaignId && this.state.embedderCommissionFee === undefined) {
-      const commissionRate = await getCommissionRate(this.state, this._data.campaignId);
-      this.state.embedderCommissionFee = commissionRate;
-    }
-  }
-
-  private getBuilderActions(category?: string) {
-    const formSchema: any = getBuilderSchema();
-    const dataSchema = formSchema.dataSchema;
-    const uiSchema = formSchema.uiSchema;
-    const customControls = formSchema.customControls();
-    let self = this;
-    const actions: any[] = [
-      {
-        name: 'Commissions',
-        icon: 'dollar-sign',
-        command: (builder: any, userInputData: any) => {
-          let _oldData: IXchainWidgetData = {
-            defaultChainId: 0,
-            wallets: [],
-            networks: []
-          }
-          return {
-            execute: async () => {
-              _oldData = { ...this._data };
-              if (userInputData.commissions) this._data.commissions = userInputData.commissions;
-              this.refreshUI();
-              if (builder?.setData) builder.setData(this._data);
-            },
-            undo: () => {
-              this._data = { ..._oldData };
-              this.refreshUI();
-              if (builder?.setData) builder.setData(this._data);
-            },
-            redo: () => { }
-          }
-        },
-        customUI: {
-          render: async (data?: any, onConfirm?: (result: boolean, data: any) => void) => {
-            const vstack = new VStack();
-            await self.loadCommissionFee();
-            const config = new ScomCommissionFeeSetup(null, {
-              commissions: self._data.commissions || [],
-              fee: self.state.embedderCommissionFee,
-              networks: self._data.networks
-            });
-            const hstack = new HStack(null, {
-              verticalAlignment: 'center',
-            });
-            const button = new Button(hstack, {
-              caption: 'Confirm',
-              width: '100%',
-              height: 40,
-              font: { color: Theme.colors.primary.contrastText }
-            });
-            vstack.append(config);
-            vstack.append(hstack);
-            button.onClick = async () => {
-              const commissions = config.commissions;
-              if (onConfirm) onConfirm(true, { commissions });
-            }
-            return vstack;
-          }
-        }
-      }
-    ]
-    if (category && category !== 'offers') {
-      actions.push({
-        name: 'Edit',
-        icon: 'edit',
-        command: (builder: any, userInputData: any) => {
-          let oldData: any = {
-            defaultChainId: 0,
-            wallets: [],
-            networks: []
-          };
-          let oldTag = {};
-          return {
-            execute: async () => {
-              oldData = JSON.parse(JSON.stringify(this._data));
-              const {
-                networks,
-                tokens,
-                ...themeSettings
-              } = userInputData;
-
-              const generalSettings = {
-                networks,
-                tokens
-              };
-
-              this._data.networks = generalSettings.networks;
-              this._data.defaultChainId = this._data.networks[0].chainId;
-              this._tokens = this._data.tokens = [];
-              if (generalSettings.tokens) {
-                this._data.tokens = generalSettings.tokens;
-                this._tokens = this.getTokenObjArr(generalSettings.tokens);
-              }
-              await this.resetRpcWallet();
-              this.refreshUI();
-              if (builder?.setData) builder.setData(this._data);
-
-              oldTag = JSON.parse(JSON.stringify(this.tag));
-              if (builder?.setTag) builder.setTag(themeSettings);
-              else this.setTag(themeSettings);
-              if (this.dappContainer) this.dappContainer.setTag(themeSettings);
-            },
-            undo: () => {
-              this._data = JSON.parse(JSON.stringify(oldData));
-              this.refreshUI();
-              if (builder?.setData) builder.setData(this._data);
-
-              this.tag = JSON.parse(JSON.stringify(oldTag));
-              if (builder?.setTag) builder.setTag(this.tag);
-              else this.setTag(this.tag);
-              if (this.dappContainer) this.dappContainer.setTag(this.tag);
-            },
-            redo: () => { }
-          }
-        },
-        userInputDataSchema: dataSchema,
-        userInputUISchema: uiSchema,
-        customControls: customControls
-      });
-    }
-    return actions
-  }
-
-  private getProjectOwnerActions() {
-    const formSchema: any = getProjectOwnerSchema();
-    if (!formSchema) return [];
-    const propertiesDataSchema = formSchema.general.dataSchema;
-    const propertiesUISchema = formSchema.general.uiSchema;
-    const actions: any[] = [
-      {
-        name: 'Settings',
-        userInputDataSchema: propertiesDataSchema,
-        userInputUISchema: propertiesUISchema
-      }
-    ];
-    return actions
+  get chainId() {
+    return this.xchainModel.chainId;
   }
 
   getConfigurators() {
-    let self = this;
-    return [
-      {
-        name: 'Project Owner Configurator',
-        target: 'Project Owners',
-        getActions: (category?: string) => {
-          return this.determineActionsByTarget('projectOwner', category);
-        },
-        getData: this.getData.bind(this),
-        setData: async (value: any) => {
-          this.setData(value);
-        },
-        getTag: this.getTag.bind(this),
-        setTag: this.setTag.bind(this)
-      },
-      {
-        name: 'Builder Configurator',
-        target: 'Builders',
-        getActions: (category?: string) => {
-          return this.determineActionsByTarget('builder', category);
-        },
-        getData: this.getData.bind(this),
-        setData: async (value: any) => {
-          const defaultData = configData.defaultBuilderData;
-          this.setData({ ...defaultData, ...value });
-        },
-        getTag: this.getTag.bind(this),
-        setTag: this.setTag.bind(this)
-      },
-      {
-        name: 'Embedder Configurator',
-        target: 'Embedders',
-        elementName: 'i-scom-commission-fee-setup',
-        getLinkParams: () => {
-          const commissions = this._data.commissions || [];
-          return {
-            data: window.btoa(JSON.stringify(commissions))
-          }
-        },
-        bindOnChanged: (element: ScomCommissionFeeSetup, callback: (data: any) => Promise<void>) => {
-          element.onChanged = async (data: any) => {
-            const commissions: ICommissionInfo[] = data.commissions;
-            if (commissions) {
-              this.supportedChainIds = commissions.map(v => v.chainId).filter((v, i, a) => a.indexOf(v) === i);
-            }
-            let resultingData = {
-              ...self._data,
-              ...data
-            };
-
-            await this.setData(resultingData);
-            await callback(data);
-          }
-        },
-        getData: async () => {
-          await self.loadCommissionFee();
-          const fee = this.state.embedderCommissionFee;
-          return { ...this._data, fee }
-        },
-        setData: async (properties: IXchainWidgetData, linkParams?: Record<string, any>) => {
-          let resultingData = {
-            ...properties
-          }
-          if (linkParams?.data) {
-            const decodedString = window.atob(linkParams.data);
-            const commissions = JSON.parse(decodedString);
-            resultingData.commissions = commissions;
-
-          }
-          await this.setData(resultingData);
-        },
-        getTag: this.getTag.bind(this),
-        setTag: this.setTag.bind(this)
-      },
-      {
-        name: 'Editor',
-        target: 'Editor',
-        getActions: (category?: string) => {
-          const actions = this.determineActionsByTarget('builder', 'category');
-          const editAction = actions.find(action => action.name === 'Edit');
-          return editAction ? [editAction] : [];
-        },
-        getData: this.getData.bind(this),
-        setData: this.setData.bind(this),
-        getTag: this.getTag.bind(this),
-        setTag: this.setTag.bind(this)
-      }
-    ]
-  }
-
-  private getData() {
-    return this._data;
+    this.initModels();
+    return this.configModel.getConfigurators();
   }
 
   private async resetRpcWallet() {
@@ -709,43 +417,24 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     if (this.dappContainer?.setData) this.dappContainer.setData(data);
   }
 
-  private async setData(value: IXchainWidgetData) {
-    this._data = value;
-    this.state.setNetworkConfig(value.networks);
-    for (let network of this._data.networks) {
-      tokenStore.updateTokenMapData(network.chainId);
-    }
-    this._tokens = this.getTokenObjArr(this._data.tokens);
-    await this.resetRpcWallet();
-    await this.refreshUI();
+  getData() {
+    return this.configModel.getData();
   }
 
-  private async getTag() {
+  async setData(value: IXchainWidgetData) {
+    this.configModel.setData(value);
+  }
+
+  getTag() {
     return this.tag;
   }
 
-  private updateTag(type: 'light' | 'dark', value: any) {
-    this.tag[type] = this.tag[type] ?? {};
-    for (let prop in value) {
-      if (value.hasOwnProperty(prop))
-        this.tag[type][prop] = value[prop];
-    }
+  async setTag(value: any) {
+    this.configModel.setTag(value);
   }
 
-  private async setTag(value: any) {
-    const newValue = value || {};
-    for (let prop in newValue) {
-      if (newValue.hasOwnProperty(prop)) {
-        if (prop === 'light' || prop === 'dark')
-          this.updateTag(prop, newValue[prop]);
-        else
-          this.tag[prop] = newValue[prop];
-      }
-    }
-    if (this.dappContainer)
-      this.dappContainer.setTag(this.tag);
-    this.updateTheme();
-    this.resizeBridgeRecord();
+  private setContainerTag(value: any) {
+    if (this.dappContainer) this.dappContainer.setTag(value);
   }
 
   private updateStyle(name: string, value: any) {
@@ -784,16 +473,37 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     return !value || !value.networks || value.networks.length === 0;
   }
 
+  private initModels() {
+    if (!this.state) {
+      this.state = new State(configData);
+    }
+    if (!this.configModel) {
+      this.configModel = new ConfigModel(this, this.state, {
+        updateTheme: () => this.updateTheme(),
+        refreshWidget: () => this.refreshUI(),
+        resetRpcWallet: () => this.resetRpcWallet(),
+        setContainerTag: (value: any) => this.setContainerTag(value),
+        resizeBridgeRecord: (value?: number|string) => this.resizeBridgeRecord(value)
+      });
+    }
+    if (!this.xchainModel) {
+      this.xchainModel = new XchainModel(this, this.state, this.configModel, {
+        showModalFees: () => this.showModalFees()
+      });
+    }
+  }
+
   async init() {
+    this.i18n.init({...mainJson});
     super.init();
-    this.state = new State(configData);
-    this.fromInputValue = new BigNumber(0);
-    this.toInputValue = new BigNumber(0);
     this.$eventBus = application.EventBus;
     this.mdSourceChain.visible = this.mdDestinationChain.visible = true;
-    this.chainId = this.state.getChainId();
+    this.xchainModel.chainId = this.state.getChainId();
     this.swapButtonText = this.getSwapButtonText();
     this.mdSourceChain.visible = this.mdDestinationChain.visible = false;
+    this.modalFees.title = this.i18n.get('$transaction_fee_details');
+    this.swapTab.caption = this.i18n.get('$swap');
+    this.brigeRecordTab.caption = this.i18n.get('$bridge_record');
     this.initExpertModal();
     this.initTransactionModal();
     const lazyLoad = this.getAttribute('lazyLoad', true, false);
@@ -842,33 +552,6 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     return formatted.replace(/,/g, '');
   }
 
-  private calculateDefaultTokens() {
-    let firstDefaultToken: ITokenObject;
-    let secondDefaultToken: ITokenObject;
-    const currentChainId = this.state.getChainId();
-    const targetChainId = this.desChain?.chainId || this.targetChainId || currentChainId;
-    const currentChainTokens = this.getSupportedTokens(this._tokens, currentChainId);
-    const targetChainTokens = this.getSupportedTokens(this._tokens, targetChainId);
-    if (!this._data.defaultInputToken) {
-      firstDefaultToken = currentChainTokens[0];
-      secondDefaultToken = targetChainTokens[0];
-    }
-    else {
-      if (this._data.defaultInputToken && currentChainId === this._data.defaultInputToken.chainId) {
-        let inputTokens = this.getSupportedTokens(this._tokens, this._data.defaultInputToken.chainId);
-        firstDefaultToken = inputTokens.find(v => v.chainId === this._data.defaultInputToken.chainId && v.address === this._data.defaultInputToken.address);
-      }
-      else {
-        firstDefaultToken = currentChainTokens[0];
-      }
-      secondDefaultToken = targetChainTokens[0];
-    }
-    return {
-      firstDefaultToken,
-      secondDefaultToken
-    }
-  }
-
   private initWallet = async () => {
     try {
       await Wallet.getClientInstance().init();
@@ -882,8 +565,8 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   private initializeWidgetConfig = async () => {
     setTimeout(async () => {
       await this.initWallet();
-      this.calculateDefaultTokens();
-      this.chainId = this.state.getChainId();
+      this.xchainModel.calculateDefaultTokens();
+      this.xchainModel.chainId = this.state.getChainId();
       this.swapButtonText = this.getSwapButtonText();
       await this.updateBalances();
       await this.renderChainList();
@@ -891,30 +574,30 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
       await getVaultGroups(this.state, true);
 
       this.initRoutes();
-      this.toInputValue = new BigNumber(0);
+      this.xchainModel.toInputValue = new BigNumber(0);
       if (this.secondTokenInput) {
         this.secondTokenInput.value = '-';
         this.secondTokenInput.inputReadOnly = true;
         this.secondTokenInput.classList.add('cursor-input--default');
       }
-      if (this.isEstimated('from')) {
-        this.onUpdateEstimatedPosition(false, true);
+      if (this.xchainModel.isEstimated('from')) {
+        this.xchainModel.onUpdateEstimatedPosition(false, true);
       }
-      this.firstTokenInput.chainId = this.srcChain?.chainId || this.chainId;
-      this.secondTokenInput.chainId = this.desChain?.chainId || this.targetChainId;
+      this.firstTokenInput.chainId = this.xchainModel.srcChain?.chainId || this.chainId;
+      this.secondTokenInput.chainId = this.xchainModel.desChain?.chainId || this.xchainModel.targetChainId;
       this.setDefaultToken();
       this.setGroupToken(true);
-      if (this.fromInputValue.isGreaterThanOrEqualTo(0)) {
-        this.onUpdateEstimatedPosition(false, true);
-        this.firstTokenInput.value = this.fixedNumber(this.fromInputValue);
-      } else if (this.toInputValue.isGreaterThanOrEqualTo(0)) {
-        this.onUpdateEstimatedPosition(true, true);
-        this.secondTokenInput.value = this.fixedNumber(this.toInputValue);
+      if (this.xchainModel.fromInputValue.isGreaterThanOrEqualTo(0)) {
+        this.xchainModel.onUpdateEstimatedPosition(false, true);
+        this.firstTokenInput.value = this.fixedNumber(this.xchainModel.fromInputValue);
+      } else if (this.xchainModel.toInputValue.isGreaterThanOrEqualTo(0)) {
+        this.xchainModel.onUpdateEstimatedPosition(true, true);
+        this.secondTokenInput.value = this.fixedNumber(this.xchainModel.toInputValue);
         this.secondTokenInput.inputReadOnly = true;
         this.secondTokenInput.classList.add('cursor-input--default');
       }
-      this.firstTokenInput.tokenDataListProp = this.getSupportedTokens(this._tokens, this.fromToken.chainId);
-      this.secondTokenInput.tokenDataListProp = this.getSupportedTokens(this._tokens, this.toToken.chainId);
+      this.firstTokenInput.tokenDataListProp = this.xchainModel.getSupportedTokens(this.configModel.tokens, this.xchainModel.fromToken.chainId);
+      this.secondTokenInput.tokenDataListProp = this.xchainModel.getSupportedTokens(this.configModel.tokens, this.xchainModel.toToken.chainId);
       this.actionSetting?.classList.remove("hidden");
 
       clearInterval(this.timer);
@@ -922,7 +605,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
         this.lastUpdated++;
       }, 1000)
       this.lastUpdated = 0;
-      if (!this.record)
+      if (!this.xchainModel.record)
         this.swapBtn.classList.add('hidden');
       this.onRenderPriceInfo();
       await this.handleAddRoute();
@@ -930,7 +613,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   }
 
   private onChainChange = async () => {
-    this.chainId = this.state.getChainId();
+    this.xchainModel.chainId = this.state.getChainId();
     tokenStore.updateTokenMapData(this.chainId);
     if (this.chainId != null && this.chainId != undefined)
       this.swapBtn.classList.remove('hidden');
@@ -983,13 +666,14 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   }
 
   private setDefaultToken = () => {
+    const { desChain, targetChainId: mTargetChainId, targetTokenMap } = this.xchainModel;
     let lstTokenMap = Object.values(tokenStore.getTokenMapByChainId(this.chainId));
     const supportedTokens = SupportedERC20Tokens[this.chainId] || [];
     lstTokenMap = lstTokenMap.filter(v => supportedTokens.some(token => token.address?.toLowerCase() === v.address?.toLowerCase()));
     const defaultCrossChainToken = lstTokenMap.find((v) => v.address);
-    const targetChainId = this.desChain?.chainId || this.targetChainId || this.state.getChainId();
+    const targetChainId = desChain?.chainId || mTargetChainId || this.state.getChainId();
     const supportedTargetTokens = SupportedERC20Tokens[targetChainId] || [];
-    let lstTargetTokenMap = Object.values(this.targetTokenMap);
+    let lstTargetTokenMap = Object.values(targetTokenMap);
     lstTargetTokenMap = lstTargetTokenMap.filter(v => supportedTargetTokens.some(token => token.address?.toLowerCase() === v.address?.toLowerCase()));
     const oswapIndex = lstTargetTokenMap.findIndex((item) => item.symbol === 'OSWAP');
     if (oswapIndex > 0) {
@@ -998,40 +682,41 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     if (this.fromTokenSymbol && this.toTokenSymbol) {
       const firstObj = lstTokenMap.find((item) => this.fromTokenSymbol === item.symbol || this.fromTokenSymbol === item.address);
       const secondObj = lstTargetTokenMap.find((item) => this.toTokenSymbol === item.symbol || this.toTokenSymbol === item.address);
-      this.fromToken = firstObj || defaultCrossChainToken;
-      this.toToken = secondObj || lstTargetTokenMap[0];
-      this.onUpdateToken(this.fromToken, true);
-      this.onUpdateToken(this.toToken, false);
-      this.firstTokenInput.token = this.fromToken;
-      this.secondTokenInput.token = this.toToken;
-      this.fromInputValue = new BigNumber(this.fromInputValue.toNumber() || defaultInput);
+      this.xchainModel.fromToken = firstObj || defaultCrossChainToken;
+      this.xchainModel.toToken = secondObj || lstTargetTokenMap[0];
+      this.onUpdateToken(this.xchainModel.fromToken, true);
+      this.onUpdateToken(this.xchainModel.toToken, false);
+      this.firstTokenInput.token = this.xchainModel.fromToken;
+      this.secondTokenInput.token = this.xchainModel.toToken;
+      this.xchainModel.fromInputValue = new BigNumber(this.xchainModel.fromInputValue.toNumber() || defaultInput);
     } else {
-      this.fromInputValue = new BigNumber(defaultInput);
+      this.xchainModel.fromInputValue = new BigNumber(defaultInput);
       let firstDefaultToken = defaultCrossChainToken;
       let secondDefaultToken = lstTargetTokenMap.find((v) => v.symbol === defaultCrossChainToken.symbol) || lstTokenMap.find((v) => v.symbol === 'USDT' || v.symbol === 'USDT.e');
       if (firstDefaultToken && secondDefaultToken) {
-        this.fromInputValue = new BigNumber(defaultInput);
+        this.xchainModel.fromInputValue = new BigNumber(defaultInput);
         this.onUpdateToken(firstDefaultToken, true);
         this.onUpdateToken(secondDefaultToken, false);
-        this.firstTokenInput.token = this.fromToken;
-        this.secondTokenInput.token = this.toToken;
+        this.firstTokenInput.token = this.xchainModel.fromToken;
+        this.secondTokenInput.token = this.xchainModel.toToken;
       }
     }
   }
 
   // TODO Only allow Oswap to be selected in Mainnet Oswap2Oswap Pilot launch, BSC <-> AVAX, should be changed when any2any is ready
   private setGroupToken(isFrom?: boolean) {
-    if ([56, 97].includes(this.chainId) && [43113, 43114].includes(this.desChain?.chainId) || [43113, 43114].includes(this.chainId) && [56, 97].includes(this.desChain?.chainId)) {
-      const token = isFrom ? this.fromToken : this.toToken;
-      const targetToken = isFrom ? this.toToken : this.fromToken;
-      const chainId = isFrom ? this.chainId : this.desChain.chainId;
-      const targetChainId = isFrom ? this.desChain.chainId : this.chainId;
+    const { targetTokenMap, desChain } = this.xchainModel;
+    if ([56, 97].includes(this.chainId) && [43113, 43114].includes(desChain?.chainId) || [43113, 43114].includes(this.chainId) && [56, 97].includes(this.xchainModel.desChain?.chainId)) {
+      const token = isFrom ? this.xchainModel.fromToken : this.xchainModel.toToken;
+      const targetToken = isFrom ? this.xchainModel.toToken : this.xchainModel.fromToken;
+      const chainId = isFrom ? this.chainId : desChain.chainId;
+      const targetChainId = isFrom ? desChain.chainId : this.chainId;
       const vaultGroups = this.state.getVaultGroups();
       const vaults = vaultGroups.map(v => v.vaults);
       const vault = vaults.find(v => v[chainId]?.assetToken.address.toLowerCase() === token.address.toLowerCase());
       const targetVault = vault ? vault[targetChainId] : null;
       if (targetVault && targetVault.assetToken.address.toLowerCase() !== targetToken.address.toLowerCase()) {
-        let listTargetTokenMap = Object.values(isFrom ? this.targetTokenMap : tokenStore.getTokenMapByChainId(targetChainId));
+        let listTargetTokenMap = Object.values(isFrom ? targetTokenMap : tokenStore.getTokenMapByChainId(targetChainId));
         const token = listTargetTokenMap.find(v => v.address?.toLowerCase() === targetVault.assetToken.address.toLowerCase());
         const tokenSelection = isFrom ? this.secondTokenInput : this.firstTokenInput;
         tokenSelection.token = token;
@@ -1048,21 +733,22 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     arrows.forEach((arrow: Element) => {
       arrow.classList.add('arrow-down--chain');
     });
-    this.lbReminderRejected?.classList.add('hidden');
-    if (this.srcChain && this.desChain) {
-      const fromToken = this.record.fromVault.assetToken;
-      const toToken = this.record.toVault.assetToken;
+    this.pnlReminderRejected?.classList.add('hidden');
+    const { srcChain, desChain } = this.xchainModel;
+    if (srcChain && desChain) {
+      const fromToken = this.xchainModel.record.fromVault.assetToken;
+      const toToken = this.xchainModel.record.toVault.assetToken;
 
       this.srcChainFirstPanel.classList.remove('hidden');
       this.targetChainFirstPanel.classList.remove('hidden');
-      this.srcChainTokenImage.url = this.srcChain.image;
-      this.srcChainTokenLabel.caption = this.srcChain.chainName;
-      this.targetChainTokenImage.url = this.desChain.image;
-      this.targetChainTokenLabel.caption = this.desChain.chainName;
-      if (this.record && fromToken) {
-        let toAmount = this.record.toAmount;
-        this.lbReminderRejected?.classList.remove('hidden');
-        this.lbReminderRejected.caption = `If the order is not executed in the target chain, the estimated withdrawalble amount is <b class="text-pink">${formatNumber(toAmount)} ${toToken.symbol}</b>`;
+      this.srcChainTokenImage.url = srcChain.image;
+      this.srcChainTokenLabel.caption = srcChain.chainName;
+      this.targetChainTokenImage.url = desChain.image;
+      this.targetChainTokenLabel.caption = desChain.chainName;
+      if (this.xchainModel.record && fromToken) {
+        let toAmount = this.xchainModel.record.toAmount;
+        this.pnlReminderRejected?.classList.remove('hidden');
+        this.lbReminderRejectedValue.caption = `${formatNumber(toAmount)} ${toToken.symbol}`;
       }
       this.targetChainSecondPanel.classList.add('hidden');
       // Show vault info at the end if vaultTokenSymbol same as toToken
@@ -1076,32 +762,34 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   }
 
   private handleSwapPopup() {
-    if (!this.record) return;
+    if (!this.xchainModel.record) return;
     this.setupCrossChainPopup();
+    const { desChain, fromToken, toToken, fromInputValue, toInputValue, isFrom } = this.xchainModel;
     const slippageTolerance = this.state.getSlippageTolerance();
-    this.fromTokenImage.url = tokenAssets.tokenPath(this.fromToken, this.chainId);
-    this.fromTokenLabel.caption = this.fromToken?.symbol ?? '';
-    this.fromTokenValue.caption = formatNumber(this.fromInputValue, 4);
-    this.toTokenImage.url = tokenAssets.tokenPath(this.toToken, this.desChain?.chainId);
-    this.toTokenLabel.caption = this.toToken?.symbol ?? '';
-    this.toTokenValue.caption = formatNumber(this.toInputValue, 4);
+    this.fromTokenImage.url = tokenAssets.tokenPath(fromToken, this.chainId);
+    this.fromTokenLabel.caption = fromToken?.symbol ?? '';
+    this.fromTokenValue.caption = formatNumber(fromInputValue, 4);
+    this.toTokenImage.url = tokenAssets.tokenPath(toToken, desChain?.chainId);
+    this.toTokenLabel.caption = toToken?.symbol ?? '';
+    this.toTokenValue.caption = formatNumber(toInputValue, 4);
     this.payOrReceiveValue.caption = formatNumber(this.getMinReceivedMaxSold());
-    this.payOrReceiveToken.caption = this.isFrom ? this.fromTokenLabel.caption : this.toTokenLabel.caption;
-    this.estimateMsg = `${this.isFrom ? 'Input' : 'Output'} is estimated. If the price change by more than ${slippageTolerance}%, your transaction will revert`;
-    this.payOrReceiveText = this.isFrom ? 'You will pay at most' : 'You will receive at least';
-    this.priceInfo2.Items = this.getPriceInfo();
+    this.payOrReceiveToken.caption = isFrom ? this.fromTokenLabel.caption : this.toTokenLabel.caption;
+    const lgKey = isFrom ? '$input_is_estimated_if_the_price_change_by_more_than_your_transaction_will_revert' : '$output_is_estimated_if_the_price_change_by_more_than_your_transaction_will_revert';
+    this.estimateMsg = this.i18n.get(lgKey, {value: `${slippageTolerance}`});
+    this.payOrReceiveText = isFrom ? '$you_will_pay_at_most' : '$you_will_receive_at_least';
+    this.priceInfo2.Items = this.xchainModel.getPriceInfo();
 
     this.swapModal.visible = true;
   }
 
   private doSwap() {
-    this.approvalModelAction.doPayAction(this.record);
+    this.approvalModelAction.doPayAction(this.xchainModel.record);
   }
 
   private getMinReceivedMaxSold = (): number | null => {
     const slippageTolerance = this.state.getSlippageTolerance();
-    if (!slippageTolerance || !this.record) return null;
-    const amount = new BigNumber(this.isFrom ? this.record.fromAmount : this.record.toAmount);
+    if (!slippageTolerance || !this.xchainModel.record) return null;
+    const amount = new BigNumber(this.xchainModel.isFrom ? this.xchainModel.record.fromAmount : this.xchainModel.record.toAmount);
     if (amount.isZero()) return null;
     const minReceivedMaxSold = amount.dividedBy(1 + slippageTolerance / 100).toNumber();
     return minReceivedMaxSold;
@@ -1109,38 +797,16 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
 
   private onUpdateToken(token: ITokenObject, isFrom: boolean) {
     if (!token) return;
-    const balance = this.getBalance(token);
+    const balance = this.xchainModel.getBalance(token);
     if (isFrom) {
-      this.fromToken = token;
-      const enabled = !this.isMaxDisabled();
+      const enabled = !this.xchainModel.isMaxDisabled();
       this.maxButton.enabled = enabled;
-      if (this.fromInputValue.gt(0)) {
-        const formattedValue = new BigNumber(this.fromInputValue).dp(token.decimals || 18, ROUNDING_NUMBER).toFixed();
-        if (!this.fromInputValue.eq(formattedValue)) {
-          if (this.firstTokenInput) {
-            this.firstTokenInput.value = formattedValue === '0' ? '' : formattedValue;
-          }
-          this.fromInputValue = new BigNumber(formattedValue);
-        }
-      } else if (this.fromInputValue.isZero()) {
-        this.onUpdateEstimatedPosition(true);
-      }
-      this.payBalance.caption = `Balance: ${formatNumber(balance, 4)} ${token.symbol}`;
+      this.xchainModel.updateToken(token, isFrom, this.firstTokenInput);
+      this.payBalance.caption = `${this.i18n.get('$balance')}: ${formatNumber(balance, 4)} ${token.symbol}`;
       this.updateTokenInput(true);
     } else {
-      this.toToken = token;
-      if (this.toInputValue.gt(0)) {
-        const formattedValue = new BigNumber(this.toInputValue).dp(token.decimals || 18, ROUNDING_NUMBER).toFixed();
-        if (!this.toInputValue.eq(formattedValue)) {
-          if (this.secondTokenInput) {
-            this.secondTokenInput.value = formattedValue === '0' ? '' : formattedValue;
-          }
-          this.toInputValue = new BigNumber(formattedValue);
-        }
-      } else if (this.toInputValue.isZero()) {
-        this.onUpdateEstimatedPosition(false);
-      }
-      this.receiveBalance.caption = `Balance: ${formatNumber(balance, 4)} ${token.symbol}`;
+      this.xchainModel.updateToken(token, isFrom, this.secondTokenInput);
+      this.receiveBalance.caption = `${this.i18n.get('$balance')}: ${formatNumber(balance, 4)} ${token.symbol}`;
       this.updateTokenInput(false);
     }
   }
@@ -1157,34 +823,26 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   }
 
   private setApprovalModalSpenderAddress() {
-    const item = this.record;
+    const item = this.xchainModel.record;
     this.state.approvalModel.spenderAddress = item.fromVault.vaultAddress;
-  }
-
-  private getInputValue(isFrom: boolean) {
-    const token = isFrom ? this.fromToken : this.toToken;
-    const value = isFrom ? this.fromInputValue : this.toInputValue;
-    if (!value || value.isNaN()) return '';
-    const newValue = value.dp(token?.decimals || 18, ROUNDING_NUMBER).toFixed();
-    return newValue;
   }
 
   private async updateTokenInput(isFrom: boolean) {
     const inputEl = isFrom ? this.firstTokenInput : this.secondTokenInput;
-    if (inputEl) inputEl.value = this.getInputValue(isFrom);
+    if (inputEl) inputEl.value = this.xchainModel.getInputValue(isFrom);
   }
 
   private async onSelectRouteItem(source: Control, item: Route) {
-    if (this.isFrom) {
+    if (this.xchainModel.isFrom) {
       if (this.payCol.children) {
         let balanceValue = item?.fromAmount || '';
-        this.fromInputValue = typeof balanceValue !== 'object' ? new BigNumber(balanceValue) : balanceValue;
+        this.xchainModel.fromInputValue = typeof balanceValue !== 'object' ? new BigNumber(balanceValue) : balanceValue;
         this.firstTokenInput.value = this.fixedNumber(balanceValue);
       }
     } else {
       if (this.receiveCol.children) {
         let balanceValue = item?.toAmount || '';
-        this.toInputValue = typeof balanceValue !== 'object' ? new BigNumber(balanceValue) : balanceValue;
+        this.xchainModel.toInputValue = typeof balanceValue !== 'object' ? new BigNumber(balanceValue) : balanceValue;
         this.secondTokenInput.value = this.fixedNumber(balanceValue);
         this.secondTokenInput.inputReadOnly = true;
         this.secondTokenInput.classList.add('cursor-input--default');
@@ -1192,11 +850,11 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     }
 
     this.swapBtn.classList.remove('hidden');
-    this.record = item;
-    if (this.fromToken && !this.fromToken.isNative && isWalletConnected() && item) {
+    this.xchainModel.record = item;
+    if (this.xchainModel.fromToken && !this.xchainModel.fromToken.isNative && isWalletConnected() && item) {
       try {
         this.setApprovalModalSpenderAddress()
-        await this.approvalModelAction.checkAllowance(this.fromToken, this.fromInputValue.toFixed());
+        await this.approvalModelAction.checkAllowance(this.xchainModel.fromToken, this.xchainModel.fromInputValue.toFixed());
       } catch (e) {
         console.log('Cannot check the Approval status (Cross Chain)', e);
       }
@@ -1208,7 +866,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     const enabled = !this.isSwapButtonDisabled();
     this.swapBtn.enabled = enabled;
     this.swapBtn.rightIcon.visible = false;
-    this.priceInfo.Items = this.getPriceInfo();
+    this.priceInfo.Items = this.xchainModel.getPriceInfo();
   }
 
   private onTokenInputChange(source: Control) {
@@ -1226,7 +884,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
           toInput.value = '0';
         return;
       }
-      const limit = isFrom ? this.fromToken?.decimals : this.toToken?.decimals;
+      const limit = isFrom ? this.xchainModel.fromToken?.decimals : this.xchainModel.toToken?.decimals;
       const value = new BigNumber(limitDecimals(amount, limit || 18));
       if (!value.gt(0)) {
         this.resetValuesByInput();
@@ -1239,17 +897,17 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
         let valueChanged = false;
         const isLastDot = amount.indexOf('.') === amount.length - 1;
         if (isFrom) {
-          if (!this.fromInputValue.eq(value)) {
-            this.fromInputValue = value;
-            this.onUpdateEstimatedPosition(false, true);
+          if (!this.xchainModel.fromInputValue.eq(value)) {
+            this.xchainModel.fromInputValue = value;
+            this.xchainModel.onUpdateEstimatedPosition(false, true);
             valueChanged = true;
           }
           if (!isLastDot)
             fromInput.value = value.toFixed();
         } else {
-          if (!this.toInputValue.eq(value)) {
-            this.toInputValue = value;
-            this.onUpdateEstimatedPosition(true, true);
+          if (!this.xchainModel.toInputValue.eq(value)) {
+            this.xchainModel.toInputValue = value;
+            this.xchainModel.onUpdateEstimatedPosition(true, true);
             valueChanged = true;
           }
           if (!isLastDot)
@@ -1263,68 +921,69 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
 
   private resetValuesByInput() {
     this.initRoutes();
-    this.priceInfo.Items = this.getPriceInfo();
-    this.fromInputValue = new BigNumber(0);
-    this.toInputValue = new BigNumber(0);
+    this.priceInfo.Items = this.xchainModel.getPriceInfo();
+    this.xchainModel.fromInputValue = new BigNumber(0);
+    this.xchainModel.toInputValue = new BigNumber(0);
   }
 
   private initRoutes() {
-    this.record = null;
+    this.xchainModel.record = null;
     this.isPriceToggled = false;
     this.swapBtn.classList.add('hidden');
   }
 
   private async handleAddRoute() {
-    if (!this.fromToken || !this.toToken || !(this.fromInputValue.gt(0) || this.toInputValue.gt(0))) return;
+    if (!this.xchainModel.fromToken || !this.xchainModel.toToken || !(this.xchainModel.fromInputValue.gt(0) || this.xchainModel.toInputValue.gt(0))) return;
     this.initRoutes();
     this.disableSelectChain(true);
     this.disableSelectChain(true, true);
-    if (!this.srcChain || !this.desChain) return;
-    let vaultGroup = await findVaultGroupByToken(this.state, this.srcChain.chainId, this.fromToken.address || this.fromToken.symbol);
+    const { srcChain, desChain } = this.xchainModel;
+    if (!srcChain || !desChain) return;
+    let vaultGroup = await findVaultGroupByToken(this.state, srcChain.chainId, this.xchainModel.fromToken.address || this.xchainModel.fromToken.symbol);
     let route = getRoute({
       vaultGroup,
-      toChainId: this.desChain.chainId,
-      fromChainId: this.srcChain.chainId,
-      inAmount: new BigNumber(this.fromInputValue)
+      toChainId: desChain.chainId,
+      fromChainId: srcChain.chainId,
+      inAmount: new BigNumber(this.xchainModel.fromInputValue)
     });
     if (route) {
       this.minSwapHintLabel?.classList.add('hidden');
     } else {
       this.minSwapHintLabel?.classList.remove('hidden');
     }
-    this.record = route;
-    this.swapModalConfirmBtn.caption = 'Confirm Swap';
+    this.xchainModel.record = route;
+    this.swapModalConfirmBtn.caption = '$confirm_swap';
     this.swapModalConfirmBtn.enabled = true;
 
-    if (this.record) {
-      const assetSymbol = this.record.toVault.assetToken.symbol;
-      const vaultAddress = this.record.toVault.vaultAddress;
-      const softCap = vaultGroup.vaults[this.srcChain.chainId].softCap;
+    if (this.xchainModel.record) {
+      const assetSymbol = this.xchainModel.record.toVault.assetToken.symbol;
+      const vaultAddress = this.xchainModel.record.toVault.vaultAddress;
+      const softCap = vaultGroup.vaults[srcChain.chainId].softCap;
       const bond = await getBond(this.state, route.toVault);
-      const vaultAssetBalance = await getVaultAssetBalance(this.state, this.desChain!.chainId, vaultAddress)
+      const vaultAssetBalance = await getVaultAssetBalance(this.state, desChain!.chainId, vaultAddress)
       const assetBalance = vaultAssetBalance ?? 0;
-      const assetDecimal = this.record.toVault.assetToken.decimals;
+      const assetDecimal = this.xchainModel.record.toVault.assetToken.decimals;
       const targetVaultAssetBalance = (new BigNumber(assetBalance)).shiftedBy(-assetDecimal);
-      const toAmount = this.record.toAmount;
+      const toAmount = this.xchainModel.record.toAmount;
       //const vaultToUsdPrice = oraclePriceMap[vaultTokenAddress.toLowerCase()]; // This will be the vaultToken -> USD Price
       //const oswapToUsdPrice = oraclePriceMap[bridgeVaultConstantMap['OSWAP'][this.desChain!.chainId].tokenAddress.toLowerCase()];
       //const vaultToOswapPrice = vaultToUsdPrice.div(oswapToUsdPrice); // This will vaultToken -> oswap price;
-      this.targetVaultAssetBalanceLabel1.caption = `Vault Asset Balance: ${formatNumber(targetVaultAssetBalance.toNumber(), 4)} ${assetSymbol}`;
-      this.targetVaultAssetBalanceLabel2.caption = `Vault Asset Balance: ${formatNumber(targetVaultAssetBalance.toNumber(), 4)} ${assetSymbol}`;
+      this.targetVaultAssetBalanceLabel1.caption = `${this.i18n.get('$vault_asset_balance')}: ${formatNumber(targetVaultAssetBalance.toNumber(), 4)} ${assetSymbol}`;
+      this.targetVaultAssetBalanceLabel2.caption = `${this.i18n.get('$vault_asset_balance')}: ${formatNumber(targetVaultAssetBalance.toNumber(), 4)} ${assetSymbol}`;
 
-      this.targetVaultBondBalanceLabel1.caption = `Vault Bond Balance: ${formatNumber(bond.toNumber(), 4)} ${assetSymbol}`;
-      this.targetVaultBondBalanceLabel2.caption = `Vault Bond Balance: ${formatNumber(bond.toNumber(), 4)} ${assetSymbol}`;
+      this.targetVaultBondBalanceLabel1.caption = `${this.i18n.get('$vault_bond_balance')}: ${formatNumber(bond.toNumber(), 4)} ${assetSymbol}`;
+      this.targetVaultBondBalanceLabel2.caption = `${this.i18n.get('$vault_bond_balance')}: ${formatNumber(bond.toNumber(), 4)} ${assetSymbol}`;
       //TODO Bond
       /* 
       if (!vault.vaultGroup) {
-        this.targetVaultBondBalanceLabel1.caption = `Vault Bond Balance: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} ${assetSymbol}`;
-        this.targetVaultBondBalanceLabel2.caption = `Vault Bond Balance: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} ${assetSymbol}`;
+        this.targetVaultBondBalanceLabel1.caption = `${this.i18n.get('$vault_bond_balance')}: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} ${assetSymbol}`;
+        this.targetVaultBondBalanceLabel2.caption = `${this.i18n.get('$vault_bond_balance')}: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} ${assetSymbol}`;
       } else if (vault.vaultGroup === 'OSWAP') {
-        this.targetVaultBondBalanceLabel1.caption = `Vault Bond Balance: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} OSWAP`;
-        this.targetVaultBondBalanceLabel2.caption = `Vault Bond Balance: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} OSWAP`;
+        this.targetVaultBondBalanceLabel1.caption = `${this.i18n.get('$vault_bond_balance')}: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} OSWAP`;
+        this.targetVaultBondBalanceLabel2.caption = `${this.i18n.get('$vault_bond_balance')}: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} OSWAP`;
       } else {
-        this.targetVaultBondBalanceLabel1.caption = `Vault Bond Balance: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} OSWAP &#8776; ${formatNumber(targetVaultBondBalance.div(vaultToOswapPrice).toNumber(), 4)} ${assetSymbol}`;
-        this.targetVaultBondBalanceLabel2.caption = `Vault Bond Balance: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} OSWAP &#8776; ${formatNumber(targetVaultBondBalance.div(vaultToOswapPrice).toNumber(), 4)} ${assetSymbol}`;
+        this.targetVaultBondBalanceLabel1.caption = `${this.i18n.get('$vault_bond_balance')}: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} OSWAP ≈ ${formatNumber(targetVaultBondBalance.div(vaultToOswapPrice).toNumber(), 4)} ${assetSymbol}`;
+        this.targetVaultBondBalanceLabel2.caption = `${this.i18n.get('$vault_bond_balance')}: ${formatNumber(targetVaultBondBalance.toNumber(), 4)} OSWAP ≈ ${formatNumber(targetVaultBondBalance.div(vaultToOswapPrice).toNumber(), 4)} ${assetSymbol}`;
       }*/
       this.crossChainSoftCapLabel1.caption = softCap ? `Cap: ${formatNumber(softCap)} ${assetSymbol}` : "-";
       this.crossChainSoftCapLabel2.caption = softCap ? `Cap: ${formatNumber(softCap)} ${assetSymbol}` : "-";
@@ -1369,10 +1028,10 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     this.onSelectRouteItem(undefined, route);
 
     if (!route) {
-      this.priceInfo.Items = this.getPriceInfo();
-      if (this.isEstimated('to')) {
+      this.priceInfo.Items = this.xchainModel.getPriceInfo();
+      if (this.xchainModel.isEstimated('to')) {
         const input = this.secondTokenInput;
-        this.toInputValue = new BigNumber(0);
+        this.xchainModel.toInputValue = new BigNumber(0);
         if (input) {
           input.value = '-';
           input.inputReadOnly = true;
@@ -1380,168 +1039,77 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
         }
       } else {
         const input = this.firstTokenInput;
-        this.fromInputValue = new BigNumber(0);
+        this.xchainModel.fromInputValue = new BigNumber(0);
         if (input) input.value = '-';
       }
     }
-    if (this.record) this.setApprovalModalSpenderAddress()
+    if (this.xchainModel.record) this.setApprovalModalSpenderAddress()
   }
 
   // Price Info
   private onTogglePrice(priceInfo: PriceInfo) {
     this.isPriceToggled = !this.isPriceToggled;
-    priceInfo.Items = this.getPriceInfo();
-  }
-
-  private getTradeFeeExactAmount() {
-    const tradeFee = this.record?.feeAmounts.totalFeeAmount;
-    if (tradeFee) {
-      return `${formatNumber(tradeFee)} ${this.fromToken?.symbol}`;
-    }
-    return '-';
-  }
-
-  private getFeeDetails() {
-    if (this.record) {
-      let feeAmounts = this.record.feeAmounts
-      let detail = [
-        {
-          title: "Base Fee",
-          description: "This fee is paid to the trolls to cover gas fee on the Target Chain",
-          value: feeAmounts.baseFeeAmount,
-        },
-        {
-          title: "Bridge Vault Liquidity Fee",
-          description: "This fee is paid to the Bridge Vault Liquidity Provider on Target Chain",
-          value: feeAmounts.transactionFeeAmount,
-        },
-        {
-          title: "Protocol Fee",
-          description: "This fee is paid to the troll owners on the Cross Chain Network",
-          value: feeAmounts.protocolFeeAmount,
-        },
-        {
-          title: "Imbalance Fee",
-          description: "This fee is acted as an incentive to balance the vault.",
-          value: feeAmounts.imbalanceFeeAmount,
-        }
-      ]
-      return detail;
-    }
-    return [];
-  }
-
-  private getPriceInfo() {
-    const tradeFeeExactAmount = this.getTradeFeeExactAmount();
-
-    const fees = this.getFeeDetails();
-    const countFees = fees.length;
-    let feeTooltip: any;
-    if (countFees === 1) {
-      const fee = fees[0];
-      feeTooltip = `${fee.description}`;
-    } else if (countFees > 1) {
-      feeTooltip = fees;
-    }
-
-    let info = [
-      {
-        title: "Transaction Fee",
-        value: this.isValidToken ? tradeFeeExactAmount : '-',
-        tooltip: feeTooltip,
-        onClick: countFees > 1 ? () => this.showModalFees() : null
-      },
-      {
-        title: "Estimated Time",
-        value: this.isValidToken && this.record ? '30 seconds' : '-',
-      },
-    ];
-    return info.filter((f: any) => !f.isHidden);
-  }
-
-  private onUpdateEstimatedPosition = (isFrom: boolean, reverseRouting: boolean = false) => {
-    if (this.isFrom != isFrom) {
-      this.isFrom = isFrom;
-    }
-  }
-
-  private isEstimated = (tokenPosition: string, strict = false) => {
-    if (tokenPosition === 'from') {
-      return strict ? this.isFrom && !this.fromInputValue.isZero() : this.isFrom;
-    } else if (tokenPosition === 'to') {
-      return strict ? !this.isFrom && !this.toInputValue.isZero() : !this.isFrom;
-    } else {
-      return false;
-    }
-  }
-
-  private getBalance(token?: ITokenObject) {
-    if (!token) return '0';
-    let tokenBalances = tokenStore.getTokenBalancesByChainId(token.chainId);
-    if (!tokenBalances) return '0';
-    const address = token.address || '';
-    let balance = address ? tokenBalances[address.toLowerCase()] ?? '0' : tokenBalances[token.symbol] || '0';
-    return balance
+    priceInfo.Items = this.xchainModel.getPriceInfo();
   }
 
   private async updateBalances() {
-    const chainIds = [...new Set([this.chainId, this.targetChainId])];
+    const chainIds = [...new Set([this.chainId, this.xchainModel.targetChainId])];
     for (let chainId of chainIds) {
       await tokenStore.updateTokenBalancesByChainId(chainId);
     }
-    if (this.fromToken) {
-      const balance = this.getBalance(this.fromToken);
-      this.payBalance.caption = `Balance: ${formatNumber(balance, 4)} ${this.fromToken.symbol}`;
+    if (this.xchainModel.fromToken) {
+      const balance = this.xchainModel.getBalance(this.xchainModel.fromToken);
+      this.payBalance.caption = `${this.i18n.get('$balance')}: ${formatNumber(balance, 4)} ${this.xchainModel.fromToken.symbol}`;
     }
-    if (this.toToken) {
-      const balance = this.getBalance(this.toToken);
-      this.receiveBalance.caption = `Balance: ${formatNumber(balance, 4)} ${this.toToken.symbol}`;
+    if (this.xchainModel.toToken) {
+      const balance = this.xchainModel.getBalance(this.xchainModel.toToken);
+      this.receiveBalance.caption = `${this.i18n.get('$balance')}: ${formatNumber(balance, 4)} ${this.xchainModel.toToken.symbol}`;
     }
-    const enabled = !this.isMaxDisabled();
+    const enabled = !this.xchainModel.isMaxDisabled();
     this.maxButton.enabled = enabled;
   }
 
   private getSwapButtonText() {
     const isApproveButtonShown = this.crossChainApprovalStatus !== ApprovalStatus.NONE;
     if (!isWalletConnected()) {
-      return 'Connect Wallet';
+      return this.i18n.get('$connect_wallet');
     }
     if (!this.state.isRpcWalletConnected()) {
-      return 'Switch Network';
+      return this.i18n.get('$switch_network');
     }
     if (isApproveButtonShown) {
       const status = this.crossChainApprovalStatus;
       switch (status) {
         case ApprovalStatus.APPROVING:
-          return 'Approving';
+          return this.i18n.get('$approving');
         case ApprovalStatus.TO_BE_APPROVED:
-          return 'Approve';
+          return this.i18n.get('$approve');
       }
       return '';
     }
     if (this.swapBtn.rightIcon.visible) {
-      return 'Creating Order';
+      return this.i18n.get('$creating_order');
     }
-    if (this.isInsufficientBalance) {
-      return `Insufficient ${this.fromToken?.symbol} balance`;
+    if (this.xchainModel.isInsufficientBalance) {
+      return this.i18n.get('$insufficient_balance', {symbol: this.xchainModel.fromToken?.symbol});
     }
-    return 'Create Order';
+    return this.i18n.get('$create_order');
   }
 
   private getWarningMessageText() {
-    const tokens = [this.fromToken?.symbol, this.toToken?.symbol];
+    const tokens = [this.xchainModel.fromToken?.symbol, this.xchainModel.toToken?.symbol];
     if (tokens.every(v => v === 'ETH' || v === 'WETH')) {
-      return 'Invalid pair';
+      return this.i18n.get('$invalid_pair');
     }
-    if (!this.record) {
-      return 'No records';
+    if (!this.xchainModel.record) {
+      return this.i18n.get('$no_records');
     }
     if (this.crossChainApprovalStatus === ApprovalStatus.TO_BE_APPROVED) {
       return '';
     }
-    let balance = this.getBalance(this.fromToken)
-    if (this.record.fromAmount.gt(balance)) {
-      return `Insufficient ${this.fromToken?.symbol} balance`;
+    let balance = this.xchainModel.getBalance(this.xchainModel.fromToken)
+    if (this.xchainModel.record.fromAmount.gt(balance)) {
+      return this.i18n.get('$insufficient_balance', {symbol: this.xchainModel.fromToken?.symbol});
     }
     return '';
   }
@@ -1584,7 +1152,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
       await clientWallet.switchNetwork(chainId);
       return;
     }
-    if (!this.record || this.isSwapButtonDisabled()) return;
+    if (!this.xchainModel.record || this.isSwapButtonDisabled()) return;
 
     const isApproveButtonShown = this.crossChainApprovalStatus !== ApprovalStatus.NONE;
     if (isApproveButtonShown) {
@@ -1597,15 +1165,18 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   private onSubmit = async () => {
     try {
       this.swapModal.visible = false;
-      showResultMessage(this.txStatusModal, 'warning', `Swapping ${formatNumber(this.fromInputValue, 4)} ${this.fromToken?.symbol} to ${formatNumber(this.toInputValue, 4)} ${this.toToken?.symbol}`);
-      if (this.toToken && this.fromToken && this.desChain) {
+      showResultMessage(this.txStatusModal, 'warning', this.i18n.get('$swapping', {
+        from: `${formatNumber(this.xchainModel.fromInputValue, 4)} ${this.xchainModel.fromToken?.symbol}`,
+        to: `${formatNumber(this.xchainModel.toInputValue, 4)} ${this.xchainModel.toToken?.symbol}`
+      }));
+      if (this.xchainModel.toToken && this.xchainModel.fromToken && this.xchainModel.desChain) {
         const { error } = await createBridgeVaultOrder(this.state, {
-          vaultAddress: this.record.fromVault.vaultAddress,
-          targetChainId: this.desChain.chainId,
-          tokenIn: this.fromToken,
-          tokenOut: this.toToken,
-          amountIn: this.record.fromAmount.toFixed(),
-          minAmountOut: this.record.toAmount.dividedBy(new BigNumber("1").plus(orderMinOutRate)).toFixed(),
+          vaultAddress: this.xchainModel.record.fromVault.vaultAddress,
+          targetChainId: this.xchainModel.desChain.chainId,
+          tokenIn: this.xchainModel.fromToken,
+          tokenOut: this.xchainModel.toToken,
+          amountIn: this.xchainModel.record.fromAmount.toFixed(),
+          minAmountOut: this.xchainModel.record.toAmount.dividedBy(new BigNumber("1").plus(orderMinOutRate)).toFixed(),
         })
         if (error) {
           showResultMessage(this.txStatusModal, 'error', error as any);
@@ -1617,16 +1188,16 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   }
 
   private onApproveRouterMax = () => {
-    showResultMessage(this.txStatusModal, 'warning', 'Approving');
+    showResultMessage(this.txStatusModal, 'warning', this.i18n.get('$approving'));
     this.setApprovalModalSpenderAddress();
-    this.approvalModelAction.doApproveAction(this.fromToken, this.fromInputValue.toString(), this.record);
+    this.approvalModelAction.doApproveAction(this.xchainModel.fromToken, this.xchainModel.fromInputValue.toString(), this.xchainModel.record);
   }
 
   private onSetMaxBalance = async (value?: number) => {
-    if (!this.fromToken?.symbol) return;
-    this.isFrom = false;
-    const address = this.fromToken?.address || this.fromToken?.symbol;
-    let balance = this.getBalance(this.fromToken);
+    if (!this.xchainModel.fromToken?.symbol) return;
+    this.xchainModel.isFrom = false;
+    const address = this.xchainModel.fromToken?.address || this.xchainModel.fromToken?.symbol;
+    let balance = this.xchainModel.getBalance(this.xchainModel.fromToken);
     let inputVal = new BigNumber(balance);
     if (!address) {
       inputVal = new BigNumber(0);
@@ -1635,16 +1206,10 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
     if (value == 0 || value) {
       inputVal = inputVal.multipliedBy(value).dividedBy(100);
     }
-    if (inputVal.eq(this.fromInputValue)) return;
-    this.fromInputValue = inputVal;
-    this.firstTokenInput.value = this.fromInputValue.toString();
+    if (inputVal.eq(this.xchainModel.fromInputValue)) return;
+    this.xchainModel.fromInputValue = inputVal;
+    this.firstTokenInput.value = this.xchainModel.fromInputValue.toString();
     await this.handleAddRoute();
-  }
-
-  private isMaxDisabled = (): boolean => {
-    const address = this.fromToken?.address || this.fromToken?.symbol;
-    let balance = this.getBalance(this.fromToken);
-    return !address || new BigNumber(balance).isLessThanOrEqualTo(0);
   }
 
   private onRenderPriceInfo() {
@@ -1655,7 +1220,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
       this.swapContainer.appendChild(this.priceInfo);
       this.priceInfo.onTogglePrice = this.onTogglePrice.bind(this);
     }
-    this.priceInfo.Items = this.getPriceInfo();
+    this.priceInfo.Items = this.xchainModel.getPriceInfo();
 
     if (!this.priceInfo2) {
       this.priceInfo2 = new PriceInfo();
@@ -1678,16 +1243,6 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
 
   private get isMetaMask() {
     return getWalletProvider() === WalletPlugin.MetaMask;
-  }
-
-  private getSupportedChainList = (updateList?: boolean) => {
-    const list = this.state.getMatchNetworks({ isDisabled: false });
-    const testnetSupportedList = list.filter(v => v.isTestnet && this.networks.some(n => n.chainId == v.chainId));
-    const mainnetSupportedList = list.filter(v => !v.isTestnet && this.networks.some(n => n.chainId == v.chainId));
-    const isMainnet = mainnetSupportedList.some((item: any) => item.chainId == this.chainId);
-    const supportList = isMainnet ? mainnetSupportedList : testnetSupportedList;
-    if (updateList) this.supportedChainList = supportList;
-    return supportList;
   }
 
   private onShowSourceChain = () => {
@@ -1727,78 +1282,63 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
 
   private selectSourceChain = async (network: IExtendedNetwork) => {
     const { chainId, isCrossChainSupported } = network;
-    if ((this.srcChain && this.srcChain.chainId != chainId) || !this.srcChain) {
+    const srcChain = this.xchainModel.srcChain;
+    if ((srcChain && srcChain.chainId != chainId) || !srcChain) {
       const rpcWallet = this.state.getRpcWallet();
       await rpcWallet.switchNetwork(network.chainId);
       if (!isCrossChainSupported) {
         this.selectDestinationChain(network)
       }
-      this.srcChain = network;
+      this.xchainModel.srcChain = network;
       const networkImg = this.btnSourceChain.querySelector('i-image');
       if (networkImg) this.btnSourceChain.removeChild(networkImg);
-      this.btnSourceChain.prepend(<i-image width={30} height={30} url={this.srcChain.image} />);
-      this.btnSourceChain.caption = `${this.srcChain.chainId} - ${this.srcChain.chainName}`;
+      this.btnSourceChain.prepend(<i-image width={30} height={30} url={this.xchainModel.srcChain.image} />);
+      this.btnSourceChain.caption = `${this.xchainModel.srcChain.chainId} - ${this.xchainModel.srcChain.chainName}`;
     }
   }
 
   private selectDestinationChain = async (network: IExtendedNetwork) => {
     this.disableSelectChain(true, true);
-    const oldDestination = this.desChain;
-    try {
-      this.desChain = network;
-      this.targetChainId = this.desChain.chainId;
-      await tokenStore.updateTokenBalancesByChainId(this.targetChainId);
-    } catch (err) {
-      console.log('err', err)
-      if (oldDestination) {
-        this.desChain = oldDestination;
-      } else {
-        this.desChain = this.supportedChainList[0];
-      }
-    }
+    await this.xchainModel.updateChain(network);
     const networkImg = this.btnDestinationChain.querySelector('i-image');
     if (networkImg) this.btnDestinationChain.removeChild(networkImg);
-    if (this.desChain) {
-      this.targetChainId = this.desChain.chainId;
-      this.btnDestinationChain.prepend(<i-image width={30} height={30} url={this.desChain.image} />);
-      this.btnDestinationChain.caption = `${this.desChain.chainId} - ${this.desChain.chainName}`;
+    if (this.xchainModel.desChain) {
+      this.xchainModel.targetChainId = this.xchainModel.desChain.chainId;
+      this.btnDestinationChain.prepend(<i-image width={30} height={30} url={this.xchainModel.desChain.image} />);
+      this.btnDestinationChain.caption = `${this.xchainModel.desChain.chainId} - ${this.xchainModel.desChain.chainName}`;
     } else {
-      this.btnDestinationChain.caption = 'Destination Chain';
+      this.btnDestinationChain.caption = '$destination_chain';
     }
-    this.secondTokenInput.tokenDataListProp = this.getSupportedTokens(this._tokens, this.desChain?.chainId);
+    this.secondTokenInput.tokenDataListProp = this.xchainModel.getSupportedTokens(this.configModel.tokens, this.xchainModel.desChain?.chainId);
     this.disableSelectChain(false, true);
   }
 
-  private getSupportedTokens = (tokens: ITokenObject[], chainId: number) => {
-    return tokens.filter(token => token.chainId === chainId) || [];
-  }
-
   private onSourceChainChanged = () => {
-    this.getSupportedChainList(true);
+    this.xchainModel.getSupportedChainList(true);
     if (!this.chainId)
-      this.chainId = this.supportedChainList[0].chainId;
+      this.xchainModel.chainId = this.supportedChainList[0].chainId;
     const currentNetwork = this.supportedChainList.find((f: IExtendedNetwork) => f.chainId == this.chainId);
-    this.srcChain = currentNetwork;
+    this.xchainModel.srcChain = currentNetwork;
     const networkImg = this.btnSourceChain.querySelector('i-image');
     if (networkImg) this.btnSourceChain.removeChild(networkImg);
-    if (this.srcChain) {
-      this.btnSourceChain.prepend(<i-image width={30} height={30} url={this.srcChain.image} />);
-      this.btnSourceChain.caption = `${this.srcChain.chainId} - ${this.srcChain.chainName}`;
+    if (this.xchainModel.srcChain) {
+      this.btnSourceChain.prepend(<i-image width={30} height={30} url={this.xchainModel.srcChain.image} />);
+      this.btnSourceChain.caption = `${this.xchainModel.srcChain.chainId} - ${this.xchainModel.srcChain.chainName}`;
     } else {
-      this.btnSourceChain.caption = 'Source Chain';
+      this.btnSourceChain.caption = '$source_chain';
     }
   }
 
   private onSelectSourceChain = async (obj: IExtendedNetwork) => {
     this.mdSourceChain.visible = false;
-    if (obj.chainId === this.srcChain?.chainId) return;
+    if (obj.chainId === this.xchainModel.srcChain?.chainId) return;
     this.firstTokenInput.chainId = obj.chainId;
     await this.selectSourceChain(obj);
   }
 
   private onSelectDestinationChain = async (obj: IExtendedNetwork) => {
     this.mdDestinationChain.visible = false;
-    if (obj.chainId === this.desChain?.chainId) return;
+    if (obj.chainId === this.xchainModel.desChain?.chainId) return;
     this.secondTokenInput.chainId = obj.chainId;
     await this.selectDestinationChain(obj);
     this.initializeWidgetConfig();
@@ -1809,35 +1349,35 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
       let obj = this.supportedChainList.find((f: IExtendedNetwork) => f.chainId == this.chainId);
       if (!obj)
         obj = this.supportedChainList[0];
-      if (!this.srcChain && obj) {
+      if (!this.xchainModel.srcChain && obj) {
         await this.selectSourceChain(obj);
       }
       this.onSourceChainChanged();
-      const targetId = this.targetChainId === this.chainId ? this.defaultTargetChainId : (this.targetChainId || this.defaultTargetChainId);
+      const targetId = this.xchainModel.targetChainId === this.chainId ? this.defaultTargetChainId : (this.xchainModel.targetChainId || this.defaultTargetChainId);
       const targetChain = this.supportedChainList.find((f: IExtendedNetwork) => f.chainId == targetId);
       const isSupported = targetChain && targetChain.isCrossChainSupported;
-      if ((!this.desChain || this.desChain?.chainId === this.chainId) && isSupported) {
+      if ((!this.xchainModel.desChain || this.xchainModel.desChain?.chainId === this.chainId) && isSupported) {
         await this.selectDestinationChain(targetChain);
       } else if (!isSupported && obj) {
         await this.selectDestinationChain(obj);
       } else {
-        await tokenStore.updateTokenBalancesByChainId(this.desChain?.chainId || this.targetChainId);
-        if (this.toToken) {
-          const balance = this.getBalance(this.toToken);
-          this.receiveBalance.caption = `Balance: ${formatNumber(balance, 4)} ${this.toToken.symbol}`;
+        await tokenStore.updateTokenBalancesByChainId(this.xchainModel.desChain?.chainId || this.xchainModel.targetChainId);
+        if (this.xchainModel.toToken) {
+          const balance = this.xchainModel.getBalance(this.xchainModel.toToken);
+          this.receiveBalance.caption = `${this.i18n.get('$balance')}: ${formatNumber(balance, 4)} ${this.xchainModel.toToken.symbol}`;
         }
-        this.secondTokenInput.tokenDataListProp = this.getSupportedTokens(this._tokens, this.desChain?.chainId || this.targetChainId);
+        this.secondTokenInput.tokenDataListProp = this.xchainModel.getSupportedTokens(this.configModel.tokens, this.xchainModel.desChain?.chainId || this.xchainModel.targetChainId);
       }
       const networkImg = this.btnDestinationChain.querySelector('i-image');
       if (networkImg) this.btnDestinationChain.removeChild(networkImg);
-      if (this.desChain) {
-        this.btnDestinationChain.prepend(<i-image width={30} height={30} url={this.desChain.image} />);
-        this.btnDestinationChain.caption = `${this.desChain.chainId} - ${this.desChain.chainName}`;
+      if (this.xchainModel.desChain) {
+        this.btnDestinationChain.prepend(<i-image width={30} height={30} url={this.xchainModel.desChain.image} />);
+        this.btnDestinationChain.caption = `${this.xchainModel.desChain.chainId} - ${this.xchainModel.desChain.chainName}`;
       } else {
-        this.btnDestinationChain.caption = 'Destination Chain';
+        this.btnDestinationChain.caption = '$destination_chain';
       }
     } else {
-      this.secondTokenInput.tokenDataListProp = this.getSupportedTokens(this._tokens, this.desChain?.chainId || this.targetChainId);
+      this.secondTokenInput.tokenDataListProp = this.xchainModel.getSupportedTokens(this.configModel.tokens, this.xchainModel.desChain?.chainId || this.xchainModel.targetChainId);
     }
   }
 
@@ -1862,13 +1402,16 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
       this.listElmDesChain.appendChild(hStack);
       if (network.chainId === this.chainId) {
         hStack.classList.add('disabled');
-        hStack.tooltip.content = 'The target chain cannot be the same as the source chain';
+        hStack.tooltip.content = '$the_target_chain_cannot_be_the_same_as_the_source_chain';
       } else {
         hStack.onClick = () => this.onSelectDestinationChain(network);
       }
     } else {
       if (!this.isMetaMask && isWalletConnected()) {
-        hStack.tooltip.content = `Xchain dapp supports this network ${chainName} (${chainId}), please switch network in the connected wallet.`;
+        hStack.tooltip.content = this.i18n.get('$xchain_dapp_supports_this_network_please_switch_network_in_the_connected_wallet', {
+          chainName,
+          chainId: `${chainId}`
+        });
         hStack.style.cursor = 'default';
       }
       hStack.onClick = () => this.onSelectSourceChain(network);
@@ -1878,10 +1421,10 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
 
   private renderChainList = async () => {
     this.oldSupportedChainList = this.supportedChainList;
-    this.getSupportedChainList(true);
+    this.xchainModel.getSupportedChainList(true);
     if (this.oldSupportedChainList[0]?.chainId !== this.supportedChainList[0]?.chainId) {
-      this.srcChain = undefined;
-      this.desChain = undefined;
+      this.xchainModel.srcChain = undefined;
+      this.xchainModel.desChain = undefined;
     };
     this.listElmSrcChain.clearInnerHTML();
     this.listElmDesChain.clearInnerHTML();
@@ -1907,7 +1450,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
   // }
 
   private showModalFees = () => {
-    const fees = this.getFeeDetails();
+    const fees = this.xchainModel.getFeeDetails();
     this.feesInfo.clearInnerHTML();
     fees.forEach((fee) => {
       this.feesInfo.appendChild(
@@ -1927,16 +1470,16 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
               data-placement="right"
             />
           </i-hstack>
-          <i-label class="ml-auto" caption={`${formatNumber(fee.value)} ${this.fromToken?.symbol}`} />
+          <i-label class="ml-auto" caption={`${formatNumber(fee.value)} ${this.xchainModel.fromToken?.symbol}`} />
         </i-hstack>
       )
     })
     this.feesInfo.appendChild(
       <i-hstack horizontalAlignment="space-between" verticalAlignment="center" margin={{ top: 16 }}>
         <i-hstack verticalAlignment="center">
-          <i-label caption="Total Transaction Fee" />
+          <i-label caption={this.i18n.get('$total_transaction_fee')} />
         </i-hstack>
-        <i-label class="ml-auto" caption={this.getTradeFeeExactAmount()} />
+        <i-label class="ml-auto" caption={this.xchainModel.getTradeFeeExactAmount()} />
       </i-hstack>
     )
     this.modalFees.visible = true;
@@ -1944,19 +1487,6 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
 
   private closeModalFees = () => {
     this.modalFees.visible = false;
-  }
-
-  private getTokenObjArr = (tokens: ITokenConfig[]) => {
-    let tokenObjArr: ITokenObject[] = [];
-    for (let token of tokens) {
-      let tokenMap = tokenStore.getTokenMapByChainId(token.chainId);
-      const tokenAddress = token.address?.startsWith('0x') ? token.address.toLowerCase() : ChainNativeTokenByChainId[token.chainId].symbol;
-      const tokenObj = tokenMap[tokenAddress];
-      if (tokenObj) {
-        tokenObjArr.push({ ...tokenObj, chainId: token.chainId });
-      }
-    }
-    return tokenObjArr;
   }
 
   private resizeBridgeRecord(value?: number | string) {
@@ -2005,7 +1535,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
           class={tabStyle}
           onChanged={this.onChangeTab.bind(this)}
         >
-          <i-tab caption="Swap">
+          <i-tab id="swapTab" caption="$swap">
             <i-panel class={swapStyle}>
               <i-panel id="swapContainer">
                 <i-hstack horizontalAlignment="end" verticalAlignment="center">
@@ -2023,14 +1553,14 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                     horizontalAlignment="space-between"
                     wrap="wrap"
                   >
-                    <i-label caption="You Pay" font={{ size: '1.125rem', color: Theme.text.primary }} />
+                    <i-label caption="$you_pay" font={{ size: '1.125rem', color: Theme.text.primary }} />
                   </i-hstack>
                   <i-panel class="btn-dropdown" width="auto" margin={{ bottom: 4 }}>
                     <i-button
                       id="btnSourceChain"
                       class="btn-chain--selection"
                       rightIcon={{ name: 'angle-down', cursor: 'pointer' }}
-                      caption="Source Chain"
+                      caption="$source_chain"
                       width="calc(100% - 1px)"
                       onClick={this.onShowSourceChain}
                     />
@@ -2049,8 +1579,8 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                   <i-panel class="token-box">
                     <i-vstack id="payContainer" class="input--token-container" >
                       <i-hstack class="balance-info" horizontalAlignment="space-between" verticalAlignment="center" width="100%" margin={{ bottom: '0.5rem' }}>
-                        <i-label id="payBalance" class="text--grey ml-auto" caption="Balance: 0"></i-label>
-                        <i-button id="maxButton" class="btn-max" caption="Max" enabled={false} onClick={() => this.onSetMaxBalance()}></i-button>
+                        <i-label id="payBalance" class="text--grey ml-auto" caption="$balance:_0"></i-label>
+                        <i-button id="maxButton" class="btn-max" caption="$max" enabled={false} onClick={() => this.onSetMaxBalance()}></i-button>
                       </i-hstack>
                       <i-panel
                         id="payCol"
@@ -2090,7 +1620,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                   </i-panel>
                   <i-hstack id="minSwapHintLabel" gap={4} verticalAlignment="start" opacity={0.9}>
                     <i-icon name="star" fill={Theme.colors.primary.main} width={13} height={13} />
-                    <i-label caption="No crosschain routes are found. You may try updating the input amount or selecting another token." font={{ size: '0.8rem', color: Theme.colors.primary.main }} />
+                    <i-label caption="$no_crosschain_routes_are_found_you_may_try_updating_the_input_amount_or_selecting_another_token" font={{ size: '0.8rem', color: Theme.colors.primary.main }} />
                   </i-hstack>
                   <i-panel class="token-box">
                     <i-vstack id="receiveContainer" class="input--token-container" >
@@ -2102,14 +1632,14 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                           horizontalAlignment="space-between"
                           wrap="wrap"
                         >
-                          <i-label caption="You Receive" font={{ size: '1.125rem', color: Theme.text.primary }} />
+                          <i-label caption="$you_receive" font={{ size: '1.125rem', color: Theme.text.primary }} />
                         </i-hstack>
                         <i-panel class="btn-dropdown" width="auto" margin={{ bottom: 8 }}>
                           <i-button
                             id="btnDestinationChain"
                             class="btn-chain--selection"
                             rightIcon={{ name: 'angle-down', cursor: 'pointer' }}
-                            caption="Destionation Chain"
+                            caption="$destination_chain"
                             width="calc(100% - 1px)"
                             onClick={this.onShowDestinationChain}
                           />
@@ -2126,7 +1656,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                           </i-modal>
                         </i-panel>
                         <i-vstack class="text-right" width="100%">
-                          <i-label id="receiveBalance" class="text--grey ml-auto" caption="Balance: 0"></i-label>
+                          <i-label id="receiveBalance" class="text--grey ml-auto" caption="$balance:_0"></i-label>
                         </i-vstack>
                       </i-vstack>
                       <i-panel
@@ -2175,7 +1705,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                 </i-panel>
               </i-panel>
 
-              <i-modal id="swapModal" class="custom-modal" title="Confirm Swap" closeIcon={{ name: 'times' }}>
+              <i-modal id="swapModal" class="custom-modal" title="$confirm_swap" closeIcon={{ name: 'times' }}>
                 <i-hstack verticalAlignment="center" horizontalAlignment="start">
                   <i-panel id="srcChainFirstPanel" class="row-chain">
                     <i-image id="srcChainTokenImage" width="30px" height="30px" url="#" />
@@ -2204,8 +1734,8 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                   </i-hstack>
                   <i-vstack class="text-right">
                     <i-label id="crossChainSoftCapLabel1" class="text--grey ml-auto"></i-label>
-                    <i-label id="targetVaultAssetBalanceLabel1" class="text--grey ml-auto" caption="Vault Asset Balance: 0"></i-label>
-                    <i-label id="targetVaultBondBalanceLabel1" class="text--grey ml-auto" caption="Vault Bond Balance: 0"></i-label>
+                    <i-label id="targetVaultAssetBalanceLabel1" class="text--grey ml-auto" caption="$vault_asset_balance:_0"></i-label>
+                    <i-label id="targetVaultBondBalanceLabel1" class="text--grey ml-auto" caption="$vault_bond_balance:_0"></i-label>
                   </i-vstack>
                   <i-icon name="arrow-down" class="arrow-down" fill={Theme.input.fontColor} width={28} height={28} />
                 </i-panel>
@@ -2223,8 +1753,8 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                 </i-hstack>
                 <i-vstack id="crossChainVaultInfoVstack" class="text-right">
                   <i-label id="crossChainSoftCapLabel2" class="text--grey ml-auto"></i-label>
-                  <i-label id="targetVaultAssetBalanceLabel2" class="text--grey ml-auto" caption="Vault Asset Balance: 0"></i-label>
-                  <i-label id="targetVaultBondBalanceLabel2" class="text--grey ml-auto" caption="Vault Bond Balance: 0"></i-label>
+                  <i-label id="targetVaultAssetBalanceLabel2" class="text--grey ml-auto" caption="$vault_asset_balance:_0"></i-label>
+                  <i-label id="targetVaultBondBalanceLabel2" class="text--grey ml-auto" caption="$vault_bond_balance:_0"></i-label>
                 </i-vstack>
                 <i-panel class="mb-1">
                   <i-label caption={this.estimateMsg}></i-label>
@@ -2236,9 +1766,14 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                 </i-panel>
                 <i-panel id="priceInfoContainer" background={{ color: Theme.background.modal }} class="bg-box mt-1 mb-1" width="100%">
                 </i-panel>
-                <i-label id="lbReminderRejected" class="flex" margin={{ top: 8, bottom: 16 }} />
+                <i-panel>
+                  <i-hstack id="pnlReminderRejected" margin={{ top: 8, bottom: 16 }} display='inline'>
+                    <i-label caption="$if_the_order_is_not_executed_in_the_target_chain_the_estimated_withdrawalble_amount_is" display='inline' />
+                    <i-label id="lbReminderRejectedValue" font={{ color: Theme.colors.primary.main, bold: true }} display='inline' padding={{ left: '0.25rem' }} />
+                  </i-hstack>
+                </i-panel>
                 <i-panel class="swap-btn-container" width="100%">
-                  <i-button id="swapModalConfirmBtn" class="btn-swap btn-os" height="auto" caption="Confirm Swap" onClick={this.doSwap}></i-button>
+                  <i-button id="swapModalConfirmBtn" class="btn-swap btn-os" height="auto" caption="$confirm_swap" onClick={this.doSwap}></i-button>
                 </i-panel>
               </i-modal>
 
@@ -2276,7 +1811,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
               <i-modal
                 id="modalFees"
                 class="bg-modal custom-modal"
-                title="Transaction Fee Details"
+                title="$transaction_fee_details"
                 closeIcon={{ name: 'times' }}
               >
                 <i-panel class="i-modal_content">
@@ -2284,7 +1819,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
                     <i-vstack id="feesInfo" />
                     <i-hstack verticalAlignment="center" horizontalAlignment="center" margin={{ top: 16, bottom: 8 }}>
                       <i-button
-                        caption="Close"
+                        caption="$close"
                         class="btn-os btn-submit"
                         onClick={() => this.closeModalFees()}
                       />
@@ -2295,7 +1830,7 @@ export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
               <i-scom-tx-status-modal id="txStatusModal" />
             </i-panel>
           </i-tab>
-          <i-tab caption="Bridge Record">
+          <i-tab id="brigeRecordTab" caption="$bridge_record">
             <i-panel id="pnlBridgeRecord" />
           </i-tab>
         </i-tabs>

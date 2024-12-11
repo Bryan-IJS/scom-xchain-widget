@@ -1,7 +1,7 @@
 import { formatNumber } from '../global/index';
 import { State, VaultOrderItem } from '../store/index';
 import { assets } from '@scom/scom-token-list';
-import { HStack, Icon, Label, Styles, VStack } from '@ijstech/components';
+import { HStack, Icon, Label, Styles, VStack, Image, Panel } from '@ijstech/components';
 const Theme = Styles.Theme.ThemeVars;
 
 const truncateAddress = (address: string, length: number, separator?: string): string => {
@@ -35,32 +35,32 @@ const getBridgeRecordColumns = () => {
       title: 'ID',
       fieldName: 'orderId',
       onRenderCell: function (source: any, data: number, row: VaultOrderItem) {
-        return `<i-label caption="#${data}"></i-label>`;
+        return `#${data}`
       }
     },
     {
-      title: 'Token Swap',
+      title: '$token_swap',
       fieldName: 'token_swap',
       onRenderCell: function (source: any, data: any, row: VaultOrderItem) {
         return renderFromToToken(row);
       }
     },
     {
-      title: 'From',
+      title: '$from',
       fieldName: 'from',
       onRenderCell: function (source: any, data: any, row: VaultOrderItem) {
         return renderTokenFrom(row);
       }
     },
     {
-      title: 'To',
+      title: '$to',
       fieldName: 'to',
       onRenderCell: function (source: any, data: any, row: VaultOrderItem) {
         return renderTokenTo(row);
       }
     },
     {
-      title: 'Status',
+      title: '$status',
       fieldName: 'status',
       onRenderCell: function (source: any, data: any, row: VaultOrderItem) {
         return renderStatus(row.status);
@@ -119,32 +119,46 @@ const renderFromToToken = (row: VaultOrderItem, justify: string = 'start') => {
 }
 
 const renderTokenFrom = (row: VaultOrderItem) => {
-  return `
-  <i-hstack gap="4px" verticalAlignment="center">
-    <i-image width="20px" class="inline-block" url="${fromTokenIcon(row)}"></i-image>
-    <i-label caption="${formatNumber(row.fromAmount)} ${row.fromToken.symbol}"></i-label>
-  </i-hstack>
-  <i-label class="text-opacity" caption="${row.fromNetwork.chainName}"></i-label>
-  `;
+  const wrapper = new HStack(undefined, {
+    gap: 4,
+    verticalAlignment: 'center'
+  });
+  new Image(wrapper, {
+    url: fromTokenIcon(row),
+    width: 20
+  });
+  new Label(wrapper, {
+    caption: `${formatNumber(row.fromAmount)} ${row.fromToken.symbol}`,
+  });
+  return wrapper;
 }
 
 const renderTokenTo = (row: VaultOrderItem) => {
-  return `
-  <i-hstack gap="4px" verticalAlignment="center">
-    <i-image width="20px" class="inline-block" url="${toTokenIcon(row)}"></i-image>
-    <i-label caption=" ${formatNumber(row.toAmount)} ${row.toToken.symbol}"></i-label>
-  </i-hstack>
-  <i-label class="text-opacity" caption="${row.toNetwork.chainName}"></i-label>
-  `;
+  const wrapper = new Panel(); 
+  const hstack = new HStack(wrapper, {
+    gap: '4px',
+    verticalAlignment: 'center'
+  });
+  new Image(hstack, {
+    url: toTokenIcon(row),
+    width: 20
+  });
+  new Label(hstack, {
+    caption: `${formatNumber(row.toAmount)} ${row.toToken.symbol}`
+  });
+  new Label(wrapper, {
+    caption: row.toNetwork.chainName,
+    class: 'text-opacity'
+  });
+  return wrapper;
 }
 
 const renderStatus = (status: string) => {
   let color = status == 'Executed' ? "green" : "red"
-  return `
-  <i-vstack>
-    <i-label class="${color}" caption="${status}"></i-label>
-  <i-vstack>
-  `;
+  return new Label(new VStack(), {
+    caption: status,
+    class: color
+  });
 }
 
 export {

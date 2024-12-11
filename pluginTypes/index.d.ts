@@ -2,6 +2,8 @@
 /// <reference path="@scom/scom-commission-proxy-contract/@ijstech/eth-wallet/index.d.ts" />
 /// <reference path="@scom/scom-dapp-container/@ijstech/eth-wallet/index.d.ts" />
 /// <reference path="@ijstech/eth-contract/index.d.ts" />
+/// <reference path="@scom/scom-token-list/index.d.ts" />
+/// <reference path="@scom/scom-commission-fee-setup/index.d.ts" />
 /// <amd-module name="@scom/scom-xchain-widget/store/data/core.ts" />
 declare module "@scom/scom-xchain-widget/store/data/core.ts" {
     import { BigNumber } from "@ijstech/eth-wallet";
@@ -167,6 +169,32 @@ declare module "@scom/scom-xchain-widget/global/common.ts" {
     };
     export const registerSendTxEvents: (sendTxEventHandlers: ISendTxEventsOptions) => void;
 }
+/// <amd-module name="@scom/scom-xchain-widget/global/interface.ts" />
+declare module "@scom/scom-xchain-widget/global/interface.ts" {
+    import { IWalletPlugin } from '@scom/scom-wallet-modal';
+    export interface ICommissionInfo {
+        chainId: number;
+        walletAddress: string;
+    }
+    export interface INetworkConfig {
+        chainName?: string;
+        chainId: number;
+    }
+    export interface ITokenConfig {
+        chainId: number;
+        address?: string;
+    }
+    export interface IXchainWidgetData {
+        campaignId?: number;
+        commissions?: ICommissionInfo[];
+        tokens?: ITokenConfig[];
+        defaultChainId: number;
+        wallets: IWalletPlugin[];
+        networks: INetworkConfig[];
+        showHeader?: boolean;
+        defaultInputToken?: ITokenConfig;
+    }
+}
 /// <amd-module name="@scom/scom-xchain-widget/global/index.ts" />
 declare module "@scom/scom-xchain-widget/global/index.ts" {
     import { INetwork } from '@ijstech/eth-wallet';
@@ -193,6 +221,7 @@ declare module "@scom/scom-xchain-widget/global/index.ts" {
     }
     export { getAPI, formatNumber, formatNumberWithSeparators, DefaultDateTimeFormat, DefaultDateFormat, formatDate, limitDecimals, limitInputNumber, isInvalidInput, SITE_ENV, showResultMessage } from "@scom/scom-xchain-widget/global/helper.ts";
     export { registerSendTxEvents, TokenMapType } from "@scom/scom-xchain-widget/global/common.ts";
+    export * from "@scom/scom-xchain-widget/global/interface.ts";
 }
 /// <amd-module name="@scom/scom-xchain-widget/data.json.ts" />
 declare module "@scom/scom-xchain-widget/data.json.ts" {
@@ -714,6 +743,324 @@ declare module "@scom/scom-xchain-widget/assets.ts" {
     };
     export default _default_1;
 }
+/// <amd-module name="@scom/scom-xchain-widget/languages/main.json.ts" />
+declare module "@scom/scom-xchain-widget/languages/main.json.ts" {
+    const _default_2: {
+        en: {
+            "last_updated_(s)_ago": string;
+            confirm_swap: string;
+            transaction_fee_details: string;
+            close: string;
+            vault_bond_balance: string;
+            vault_asset_balance: string;
+            "vault_bond_balance:_0": string;
+            "vault_asset_balance:_0": string;
+            "balance:_0": string;
+            "swapping_from_to:": string;
+            no_crosschain_routes_are_found_you_may_try_updating_the_input_amount_or_selecting_another_token: string;
+            no_routing: string;
+            balance: string;
+            you_receive: string;
+            you_pay: string;
+            destination_chain: string;
+            source_chain: string;
+            you_swap: string;
+            total_transaction_fee: string;
+            exceed_vault_asset_balance_or_bond_balance: string;
+            cap_reached: string;
+            cap: string;
+            you_will_pay_at_most: string;
+            you_will_receive_at_least: string;
+            input_is_estimated_if_the_price_change_by_more_than_your_transaction_will_revert: string;
+            output_is_estimated_if_the_price_change_by_more_than_your_transaction_will_revert: string;
+            if_the_order_is_not_executed_in_the_target_chain_the_estimated_withdrawalble_amount_is: string;
+            swapping: string;
+            approving: string;
+            max: string;
+            xchain_dapp_supports_this_network_please_switch_network_in_the_connected_wallet: string;
+            connect_wallet: string;
+            switch_network: string;
+            approve: string;
+            swap: string;
+            create_order: string;
+            turn_on_expert_mode: string;
+            insufficient_balance: string;
+            invalid_pair: string;
+            circuit_breaker_triggered: string;
+            base_fee: string;
+            this_fee_is_paid_to_the_trolls_to_cover_gas_fee_on_the_target_chain: string;
+            bridge_vault_liquidity_fee: string;
+            this_fee_is_paid_to_the_bridge_vault_liquidity_provider_on_target_chain: string;
+            protocol_fee: string;
+            this_fee_is_paid_to_the_troll_owners_on_the_cross_chain_network: string;
+            imbalance_fee: string;
+            this_fee_is_acted_as_an_incentive_to_balance_the_vault: string;
+            bridge_record: string;
+        };
+        "zh-hant": {
+            "last_updated_(s)_ago": string;
+            approve: string;
+            approving: string;
+            balance: string;
+            cap_reached: string;
+            cap: string;
+            circuit_breaker_triggered: string;
+            close: string;
+            confirm_swap: string;
+            connect_wallet: string;
+            create_order: string;
+            destination_chain: string;
+            exceed_vault_asset_balance_or_bond_balance: string;
+            if_the_order_is_not_executed_in_the_target_chain_the_estimated_withdrawalble_amount_is: string;
+            input_is_estimated_if_the_price_change_by_more_than_your_transaction_will_revert: string;
+            insufficient_balance: string;
+            invalid_pair: string;
+            max: string;
+            no_crosschain_routes_are_found_you_may_try_updating_the_input_amount_or_selecting_another_token: string;
+            no_routing: string;
+            output_is_estimated_if_the_price_change_by_more_than_your_transaction_will_revert: string;
+            source_chain: string;
+            swap_supports_this_network_please_switch_network_in_the_connected_wallet: string;
+            swap: string;
+            swapping: string;
+            switch_network: string;
+            total_transaction_fee: string;
+            transaction_fee_details: string;
+            turn_on_expert_mode: string;
+            vault_asset_balance: string;
+            vault_bond_balance: string;
+            you_pay: string;
+            you_receive: string;
+            you_swap: string;
+            you_will_pay_at_most: string;
+            you_will_receive_at_least: string;
+            "vault_bond_balance:_0": string;
+            "vault_asset_balance:_0": string;
+            "balance:_0": string;
+            "swapping_from_to:": string;
+            base_fee: string;
+            bridge_vault_liquidity_fee: string;
+            protocol_fee: string;
+            imbalance_fee: string;
+            this_fee_is_acted_as_an_incentive_to_balance_the_vault: string;
+            this_fee_is_paid_to_the_bridge_vault_liquidity_provider_on_target_chain: string;
+            this_fee_is_paid_to_the_troll_owners_on_the_cross_chain_network: string;
+            this_fee_is_paid_to_the_trolls_to_cover_gas_fee_on_the_target_chain: string;
+            bridge_record: string;
+        };
+        vi: {
+            "last_updated_(s)_ago": string;
+            confirm_swap: string;
+            transaction_fee_details: string;
+            close: string;
+            vault_bond_balance: string;
+            vault_asset_balance: string;
+            "vault_bond_balance:_0": string;
+            "vault_asset_balance:_0": string;
+            "balance:_0": string;
+            "swapping_from_to:": string;
+            no_crosschain_routes_are_found_you_may_try_updating_the_input_amount_or_selecting_another_token: string;
+            no_routing: string;
+            balance: string;
+            you_receive: string;
+            you_pay: string;
+            destination_chain: string;
+            source_chain: string;
+            you_swap: string;
+            total_transaction_fee: string;
+            exceed_vault_asset_balance_or_bond_balance: string;
+            cap_reached: string;
+            cap: string;
+            you_will_pay_at_most: string;
+            you_will_receive_at_least: string;
+            input_is_estimated_if_the_price_change_by_more_than_your_transaction_will_revert: string;
+            output_is_estimated_if_the_price_change_by_more_than_your_transaction_will_revert: string;
+            if_the_order_is_not_executed_in_the_target_chain_the_estimated_withdrawalble_amount_is: string;
+            swapping: string;
+            approving: string;
+            max: string;
+            xchain_dapp_supports_this_network_please_switch_network_in_the_connected_wallet: string;
+            price_impact_too_high_if_you_want_to_bypass_this_check_please_turn_on_expert_mode: string;
+            connect_wallet: string;
+            switch_network: string;
+            approve: string;
+            swap: string;
+            create_order: string;
+            turn_on_expert_mode: string;
+            insufficient_balance: string;
+            invalid_pair: string;
+            circuit_breaker_triggered: string;
+            base_fee: string;
+            this_fee_is_paid_to_the_trolls_to_cover_gas_fee_on_the_target_chain: string;
+            imbalance_fee: string;
+            this_fee_is_acted_as_an_incentive_to_balance_the_vault: string;
+            bridge_vault_liquidity_fee: string;
+            this_fee_is_paid_to_the_bridge_vault_liquidity_provider_on_target_chain: string;
+            protocol_fee: string;
+            this_fee_is_paid_to_the_troll_owners_on_the_cross_chain_network: string;
+            bridge_record: string;
+        };
+    };
+    export default _default_2;
+}
+/// <amd-module name="@scom/scom-xchain-widget/languages/bridgeRecord.json.ts" />
+declare module "@scom/scom-xchain-widget/languages/bridgeRecord.json.ts" {
+    const _default_3: {
+        en: {
+            data_last_updated_0_seconds_ago: string;
+            data_last_updated_seconds_ago: string;
+            latest_swap: string;
+            no_data: string;
+            please_connect_with_your_wallet: string;
+            oldest_swap: string;
+            destination_chain: string;
+            source_chain: string;
+            token_group: string;
+            confirming: string;
+            request_cancel: string;
+            withdraw: string;
+            "you_can_withdraw_the_tokens_after_the_cancellation_is_approved_by_the_bridge_trolls._the_cancellation_is_subjected_to_a_cancellation_fee": string;
+            the_token_will_be_returned_to_your_wallet_after_withdrawal: string;
+            "the_request_must_be_submitted_from_the_destination_chain,_please_switch_your_network_as_instructed": string;
+            "the_request_must_be_submitted_from_the_source_chain,_please_switch_your_network_as_instructed": string;
+            amend_order: string;
+            minimum_receive: string;
+            the_address_has_been_copied: string;
+            loading: string;
+            withdraw_amount: string;
+            switch_network: string;
+            token_receive: string;
+            expected_receive: string;
+            confirm: string;
+            token_swap: string;
+            from: string;
+            to: string;
+            status: string;
+        };
+        "zh-hant": {};
+        vi: {
+            data_last_updated_0_seconds_ago: string;
+            data_last_updated_seconds_ago: string;
+            latest_swap: string;
+            no_data: string;
+            please_connect_with_your_wallet: string;
+            oldest_swap: string;
+            destination_chain: string;
+            source_chain: string;
+            token_group: string;
+            confirming: string;
+            request_cancel: string;
+            withdraw: string;
+            "you_can_withdraw_the_tokens_after_the_cancellation_is_approved_by_the_bridge_trolls._the_cancellation_is_subjected_to_a_cancellation_fee": string;
+            the_token_will_be_returned_to_your_wallet_after_withdrawal: string;
+            "the_request_must_be_submitted_from_the_destination_chain,_please_switch_your_network_as_instructed": string;
+            "the_request_must_be_submitted_from_the_source_chain,_please_switch_your_network_as_instructed": string;
+            amend_order: string;
+            minimum_receive: string;
+            the_address_has_been_copied: string;
+            loading: string;
+            withdraw_amount: string;
+            switch_network: string;
+            token_receive: string;
+            expected_receive: string;
+            confirm: string;
+            token_swap: string;
+            from: string;
+            to: string;
+            status: string;
+        };
+    };
+    export default _default_3;
+}
+/// <amd-module name="@scom/scom-xchain-widget/languages/expertMode.json.ts" />
+declare module "@scom/scom-xchain-widget/languages/expertMode.json.ts" {
+    const _default_4: {
+        en: {
+            expert_mode_allows_high_slippage_trades_that_often_result_in_bad_rates_and_lost_funds: string;
+            only_use_this_mode_if_you_know_what_you_are_doing: string;
+            turn_on_expert_mode: string;
+        };
+        "zh-hant": {};
+        vi: {
+            expert_mode_allows_high_slippage_trades_that_often_result_in_bad_rates_and_lost_funds: string;
+            only_use_this_mode_if_you_know_what_you_are_doing: string;
+            turn_on_expert_mode: string;
+        };
+    };
+    export default _default_4;
+}
+/// <amd-module name="@scom/scom-xchain-widget/languages/priceInfo.json.ts" />
+declare module "@scom/scom-xchain-widget/languages/priceInfo.json.ts" {
+    const _default_5: {
+        en: {
+            price_info: string;
+            click_to_view_details: string;
+            transaction_fee: string;
+            estimated_time: string;
+            "30_seconds": string;
+        };
+        "zh-hant": {
+            click_to_view_details: string;
+            transaction_fee: string;
+            estimated_time: string;
+            "30_seconds": string;
+        };
+        vi: {
+            price_info: string;
+            click_to_view_details: string;
+            transaction_fee: string;
+            estimated_time: string;
+            "30_seconds": string;
+        };
+    };
+    export default _default_5;
+}
+/// <amd-module name="@scom/scom-xchain-widget/languages/transactions.json.ts" />
+declare module "@scom/scom-xchain-widget/languages/transactions.json.ts" {
+    const _default_6: {
+        en: {
+            transaction_settings: string;
+            please_enter_a_valid_transaction_deadline: string;
+            please_enter_a_valid_slippage_percentage: string;
+            your_transaction_may_fail: string;
+            your_transaction_may_be_frontrun: string;
+            toggle_expert_mode: string;
+            your_transaction_will_revert_if_the_price_changes_unfavorably_by_more_than_this_percentage: string;
+            slippage_tolerance: string;
+            cross_chain_transaction_deadline: string;
+            your_transaction_will_revert_if_it_is_pending_for_more_than_this_long: string;
+            off: string;
+            on: string;
+            hours: string;
+        };
+        "zh-hant": {};
+        vi: {
+            transaction_settings: string;
+            please_enter_a_valid_transaction_deadline: string;
+            please_enter_a_valid_slippage_percentage: string;
+            your_transaction_may_fail: string;
+            your_transaction_may_be_frontrun: string;
+            toggle_expert_mode: string;
+            your_transaction_will_revert_if_the_price_changes_unfavorably_by_more_than_this_percentage: string;
+            slippage_tolerance: string;
+            cross_chain_transaction_deadline: string;
+            your_transaction_will_revert_if_it_is_pending_for_more_than_this_long: string;
+            off: string;
+            on: string;
+            hours: string;
+        };
+    };
+    export default _default_6;
+}
+/// <amd-module name="@scom/scom-xchain-widget/languages/index.ts" />
+declare module "@scom/scom-xchain-widget/languages/index.ts" {
+    import mainJson from "@scom/scom-xchain-widget/languages/main.json.ts";
+    import bridgeRecordJson from "@scom/scom-xchain-widget/languages/bridgeRecord.json.ts";
+    import expertModeJson from "@scom/scom-xchain-widget/languages/expertMode.json.ts";
+    import priceInfoJson from "@scom/scom-xchain-widget/languages/priceInfo.json.ts";
+    import transactionsJson from "@scom/scom-xchain-widget/languages/transactions.json.ts";
+    export { mainJson, bridgeRecordJson, expertModeJson, priceInfoJson, transactionsJson };
+}
 /// <amd-module name="@scom/scom-xchain-widget/price-info/index.tsx" />
 declare module "@scom/scom-xchain-widget/price-info/index.tsx" {
     import { Module, Control, ControlElement, Image, Icon, Container } from '@ijstech/components';
@@ -742,8 +1089,8 @@ declare module "@scom/scom-xchain-widget/price-info/index.tsx" {
 }
 /// <amd-module name="@scom/scom-xchain-widget/expert-mode-settings/index.css.ts" />
 declare module "@scom/scom-xchain-widget/expert-mode-settings/index.css.ts" {
-    const _default_2: string;
-    export default _default_2;
+    const _default_7: string;
+    export default _default_7;
 }
 /// <amd-module name="@scom/scom-xchain-widget/expert-mode-settings/index.tsx" />
 declare module "@scom/scom-xchain-widget/expert-mode-settings/index.tsx" {
@@ -770,8 +1117,8 @@ declare module "@scom/scom-xchain-widget/expert-mode-settings/index.tsx" {
 }
 /// <amd-module name="@scom/scom-xchain-widget/transaction-settings-layout/index.css.ts" />
 declare module "@scom/scom-xchain-widget/transaction-settings-layout/index.css.ts" {
-    const _default_3: string;
-    export default _default_3;
+    const _default_8: string;
+    export default _default_8;
 }
 /// <amd-module name="@scom/scom-xchain-widget/transaction-settings-layout/index.tsx" />
 declare module "@scom/scom-xchain-widget/transaction-settings-layout/index.tsx" {
@@ -824,8 +1171,8 @@ declare module "@scom/scom-xchain-widget/transaction-settings-layout/index.tsx" 
 }
 /// <amd-module name="@scom/scom-xchain-widget/transaction-settings/index.css.ts" />
 declare module "@scom/scom-xchain-widget/transaction-settings/index.css.ts" {
-    const _default_4: string;
-    export default _default_4;
+    const _default_9: string;
+    export default _default_9;
 }
 /// <amd-module name="@scom/scom-xchain-widget/transaction-settings/index.tsx" />
 declare module "@scom/scom-xchain-widget/transaction-settings/index.tsx" {
@@ -856,7 +1203,7 @@ declare module "@scom/scom-xchain-widget/transaction-settings/index.tsx" {
 /// <amd-module name="@scom/scom-xchain-widget/bridge-record/bridgeRecordColumn.ts" />
 declare module "@scom/scom-xchain-widget/bridge-record/bridgeRecordColumn.ts" {
     import { State, VaultOrderItem } from "@scom/scom-xchain-widget/store/index.ts";
-    import { Icon, VStack } from '@ijstech/components';
+    import { HStack, Icon, Label, VStack, Panel } from '@ijstech/components';
     const truncateAddress: (address: string, length: number, separator?: string) => string;
     const toTokenIcon: (data: any) => string;
     const viewTransaction: (state: State, chainId: number, txHash: string) => void;
@@ -869,6 +1216,21 @@ declare module "@scom/scom-xchain-widget/bridge-record/bridgeRecordColumn.ts" {
         title: string;
         fieldName: string;
         onRenderCell: (source: any, data: any, row: VaultOrderItem) => VStack;
+        type?: undefined;
+    } | {
+        title: string;
+        fieldName: string;
+        onRenderCell: (source: any, data: any, row: VaultOrderItem) => HStack;
+        type?: undefined;
+    } | {
+        title: string;
+        fieldName: string;
+        onRenderCell: (source: any, data: any, row: VaultOrderItem) => Panel;
+        type?: undefined;
+    } | {
+        title: string;
+        fieldName: string;
+        onRenderCell: (source: any, data: any, row: VaultOrderItem) => Label;
         type?: undefined;
     } | {
         title: string;
@@ -1032,6 +1394,11 @@ declare module "@scom/scom-xchain-widget/bridge-record/index.tsx" {
         private onExpandedRowRender;
         render(): any;
     }
+}
+/// <amd-module name="@scom/scom-xchain-widget/index.css.ts" />
+declare module "@scom/scom-xchain-widget/index.css.ts" {
+    export const swapStyle: string;
+    export const tabStyle: string;
 }
 /// <amd-module name="@scom/scom-xchain-widget/formSchema.ts" />
 declare module "@scom/scom-xchain-widget/formSchema.ts" {
@@ -1227,185 +1594,29 @@ declare module "@scom/scom-xchain-widget/formSchema.ts" {
     };
     export function getProjectOwnerSchema(): any;
 }
-/// <amd-module name="@scom/scom-xchain-widget/index.css.ts" />
-declare module "@scom/scom-xchain-widget/index.css.ts" {
-    export const swapStyle: string;
-    export const tabStyle: string;
-}
-/// <amd-module name="@scom/scom-xchain-widget" />
-declare module "@scom/scom-xchain-widget" {
-    import { Module, Container, ControlElement } from '@ijstech/components';
-    import ScomCommissionFeeSetup from '@scom/scom-commission-fee-setup';
-    import { IWalletPlugin } from '@scom/scom-wallet-modal';
-    import { BlockNoteEditor, BlockNoteSpecs, callbackFnType, executeFnType } from '@scom/scom-blocknote-sdk';
-    export enum ApprovalStatus {
-        TO_BE_APPROVED = 0,
-        APPROVING = 1,
-        NONE = 2
+/// <amd-module name="@scom/scom-xchain-widget/model/configModel.ts" />
+declare module "@scom/scom-xchain-widget/model/configModel.ts" {
+    import { Module } from "@ijstech/components";
+    import { ICommissionInfo, INetworkConfig, ITokenConfig, IXchainWidgetData } from "@scom/scom-xchain-widget/global/index.ts";
+    import { State } from "@scom/scom-xchain-widget/store/index.ts";
+    import { IWalletPlugin } from "@scom/scom-wallet-modal";
+    import ScomCommissionFeeSetup from "@scom/scom-commission-fee-setup";
+    import { ITokenObject } from "@scom/scom-token-list";
+    interface IConfigOptions {
+        refreshWidget: () => Promise<void>;
+        resetRpcWallet: () => void;
+        setContainerTag: (value: any) => void;
+        updateTheme: () => void;
+        resizeBridgeRecord: (value?: number | string) => void;
     }
-    interface ICommissionInfo {
-        chainId: number;
-        walletAddress: string;
-    }
-    interface INetworkConfig {
-        chainName?: string;
-        chainId: number;
-    }
-    interface ITokenConfig {
-        chainId: number;
-        address?: string;
-    }
-    interface ScomXchainWidgetElement extends ControlElement {
-        campaignId?: number;
-        lazyLoad?: boolean;
-        tokens?: ITokenConfig[];
-        defaultChainId: number;
-        networks: INetworkConfig[];
-        wallets: IWalletPlugin[];
-        showHeader?: boolean;
-        commissions?: ICommissionInfo[];
-        defaultInputToken?: ITokenConfig;
-    }
-    export interface IXchainWidgetData {
-        campaignId?: number;
-        commissions?: ICommissionInfo[];
-        tokens?: ITokenConfig[];
-        defaultChainId: number;
-        wallets: IWalletPlugin[];
-        networks: INetworkConfig[];
-        showHeader?: boolean;
-        defaultInputToken?: ITokenConfig;
-    }
-    global {
-        namespace JSX {
-            interface IntrinsicElements {
-                ['i-scom-xchain-widget']: ScomXchainWidgetElement;
-            }
-        }
-    }
-    export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
-        private tabs;
-        private swapContainer;
-        private pnlBridgeRecord;
-        private receiveContainer;
-        private payBalance;
-        private receiveBalance;
-        private firstTokenInput;
-        private secondTokenInput;
-        private payCol;
-        private receiveCol;
-        private swapModal;
-        private priceInfo;
-        private priceInfo2;
-        private priceInfoContainer;
-        private fromTokenImage;
-        private fromTokenLabel;
-        private fromTokenValue;
-        private toTokenImage;
-        private toTokenLabel;
-        private toTokenValue;
-        private payOrReceiveValue;
-        private payOrReceiveToken;
-        private txStatusModal;
-        private maxButton;
-        private swapBtn;
-        private actionSetting;
-        private lbSwitchNetwork;
-        private urlParams;
-        private isFrom;
-        private fromToken?;
-        private toToken?;
-        private fromTokenSymbol;
-        private toTokenSymbol;
-        private fromInputValue;
-        private toInputValue;
-        private timeout;
-        private isPriceToggled;
-        private record;
-        private chainId;
-        private swapButtonText;
-        private _lastUpdated;
-        private lastUpdatedText;
-        private timer;
-        private $eventBus;
-        private estimateMsg;
-        private payOrReceiveText;
-        private approvalModelAction;
-        private crossChainApprovalStatus;
-        private oldSupportedChainList;
-        private supportedChainList;
-        private minSwapHintLabel;
-        private srcChain;
-        private desChain;
-        private targetChainId;
-        private srcChainFirstPanel;
-        private targetChainFirstPanel;
-        private srcChainTokenImage;
-        private srcChainTokenLabel;
-        private targetChainTokenImage;
-        private targetChainTokenLabel;
-        private targetChainSecondPanel;
-        private targetChainVaultImage;
-        private targetChainVaultLabel;
-        private targetVaultTokenImage;
-        private targetVaultTokenLabel;
-        private targetVaultTokenValue;
-        private targetVaultAssetBalanceLabel1;
-        private targetVaultBondBalanceLabel1;
-        private crossChainSoftCapLabel1;
-        private targetVaultAssetBalanceLabel2;
-        private targetVaultBondBalanceLabel2;
-        private crossChainSoftCapLabel2;
-        private swapModalConfirmBtn;
-        private crossChainVaultInfoVstack;
-        private modalFees;
-        private feesInfo;
-        private lbReminderRejected;
-        private btnSourceChain;
-        private mdSourceChain;
-        private listElmSrcChain;
-        private isSrcOpened;
-        private expertModal;
-        private transactionModal;
-        private bridgeRecord;
-        private btnDestinationChain;
-        private mdDestinationChain;
-        private listElmDesChain;
-        private isDesOpened;
-        private dappContainer;
-        private mdWallet;
+    export class ConfigModel {
+        private module;
+        private options;
         private state;
-        private isInited;
-        private supportedChainIds;
-        private _data;
-        tag: any;
         private _tokens;
-        constructor(parent?: Container, options?: any);
-        addBlock(blocknote: any, executeFn: executeFnType, callbackFn?: callbackFnType): {
-            block: any;
-            slashItem: {
-                name: string;
-                execute: (editor: BlockNoteEditor) => void;
-                aliases: string[];
-                group: string;
-                icon: {
-                    name: string;
-                };
-                hint: string;
-            };
-            moduleData: {
-                name: string;
-                localPath: string;
-            };
-        };
-        removeRpcWalletEvents(): void;
-        onHide(): void;
-        private get isInsufficientBalance();
-        private get lastUpdated();
-        private set lastUpdated(value);
-        private get isValidToken();
-        private get targetTokenMap();
-        private get defaultTargetChainId();
+        private _data;
+        private supportedChainIds;
+        constructor(module: Module, state: State, options: IConfigOptions);
         get defaultChainId(): number;
         set defaultChainId(value: number);
         get wallets(): IWalletPlugin[];
@@ -1414,17 +1625,25 @@ declare module "@scom/scom-xchain-widget" {
         set networks(value: INetworkConfig[]);
         get showHeader(): boolean;
         set showHeader(value: boolean);
-        set width(value: string | number);
-        private determineActionsByTarget;
+        get campaignId(): number;
+        get defaultInputToken(): ITokenConfig;
+        get tokens(): ITokenObject[];
+        setData(value: IXchainWidgetData): Promise<void>;
+        getData(): IXchainWidgetData;
+        getTag(): any;
+        setTag(value: any): void;
+        private updateTag;
         private loadCommissionFee;
+        private getTokenObjArr;
         private getBuilderActions;
         private getProjectOwnerActions;
+        private determineActionsByTarget;
         getConfigurators(): ({
             name: string;
             target: string;
             elementName: string;
             getLinkParams: () => {
-                data: any;
+                data: string;
             };
             bindOnChanged: (element: ScomCommissionFeeSetup, callback: (data: any) => Promise<void>) => void;
             getData: () => Promise<{
@@ -1454,20 +1673,296 @@ declare module "@scom/scom-xchain-widget" {
             getLinkParams?: undefined;
             bindOnChanged?: undefined;
         })[];
-        private getData;
+    }
+}
+/// <amd-module name="@scom/scom-xchain-widget/model/xchainModel.ts" />
+declare module "@scom/scom-xchain-widget/model/xchainModel.ts" {
+    import { Module } from "@ijstech/components";
+    import { State } from "@scom/scom-xchain-widget/store/index.ts";
+    import { ConfigModel } from "@scom/scom-xchain-widget/model/configModel.ts";
+    import { ITokenObject } from "@scom/scom-token-list";
+    import { IExtendedNetwork } from "@scom/scom-xchain-widget/global/index.ts";
+    import { BigNumber } from "@ijstech/eth-contract";
+    interface ISwapOptions {
+        showModalFees: () => void;
+    }
+    export class XchainModel {
+        private state;
+        private configModel;
+        private options;
+        private module;
+        private _srcChain;
+        private _desChain;
+        private _fromInputValue;
+        private _toInputValue;
+        private _isFrom;
+        private _fromToken;
+        private _toToken;
+        private _record;
+        private _chainId;
+        private _targetChainId;
+        private _supportedChainList;
+        constructor(module: Module, state: State, configModel: ConfigModel, options: ISwapOptions);
+        getSupportedTokens: (tokens: ITokenObject[], chainId: number) => ITokenObject[];
+        get isFrom(): boolean;
+        set isFrom(value: boolean);
+        get fromInputValue(): BigNumber;
+        set fromInputValue(value: BigNumber);
+        get toInputValue(): BigNumber;
+        set toInputValue(value: BigNumber);
+        get record(): any;
+        set record(value: any);
+        get fromToken(): ITokenObject;
+        set fromToken(token: ITokenObject);
+        get toToken(): ITokenObject;
+        set toToken(token: ITokenObject);
+        get desChain(): IExtendedNetwork | undefined;
+        set desChain(value: IExtendedNetwork | undefined);
+        get srcChain(): IExtendedNetwork | undefined;
+        set srcChain(value: IExtendedNetwork | undefined);
+        get targetChainId(): number | undefined;
+        set targetChainId(value: number | undefined);
+        get isInsufficientBalance(): boolean;
+        get isValidToken(): boolean;
+        get targetTokenMap(): import("@scom/scom-token-list/interface.ts").TokenMapType;
+        get defaultTargetChainId(): number;
+        get supportedChainList(): IExtendedNetwork[];
+        get chainId(): number;
+        set chainId(value: number);
+        getSupportedChainList: (updateList?: boolean) => IExtendedNetwork[];
+        onUpdateEstimatedPosition: (isFrom: boolean, reverseRouting?: boolean) => void;
+        getBalance(token?: ITokenObject): string;
+        isEstimated: (tokenPosition: string, strict?: boolean) => boolean;
+        isMaxDisabled: () => boolean;
+        getInputValue(isFrom: boolean): string;
+        calculateDefaultTokens(): {
+            firstDefaultToken: ITokenObject;
+            secondDefaultToken: ITokenObject;
+        };
+        updateToken(token: ITokenObject, isFrom: boolean, tokenInput: any): void;
+        updateChain(network: IExtendedNetwork): Promise<void>;
+        getTradeFeeExactAmount(): string;
+        getFeeDetails(): {
+            title: string;
+            description: string;
+            value: any;
+        }[];
+        getPriceInfo(): ({
+            title: string;
+            value: string;
+            tooltip: any;
+            onClick: () => void;
+        } | {
+            title: string;
+            value: string;
+            tooltip?: undefined;
+            onClick?: undefined;
+        })[];
+    }
+}
+/// <amd-module name="@scom/scom-xchain-widget/model/index.ts" />
+declare module "@scom/scom-xchain-widget/model/index.ts" {
+    export { ConfigModel } from "@scom/scom-xchain-widget/model/configModel.ts";
+    export { XchainModel } from "@scom/scom-xchain-widget/model/xchainModel.ts";
+}
+/// <amd-module name="@scom/scom-xchain-widget" />
+declare module "@scom/scom-xchain-widget" {
+    import { Module, Container, ControlElement } from '@ijstech/components';
+    import { IWalletPlugin } from '@scom/scom-wallet-modal';
+    import { BlockNoteEditor, BlockNoteSpecs, callbackFnType, executeFnType } from '@scom/scom-blocknote-sdk';
+    import { IXchainWidgetData, ICommissionInfo, INetworkConfig, ITokenConfig } from "@scom/scom-xchain-widget/global/index.ts";
+    export enum ApprovalStatus {
+        TO_BE_APPROVED = 0,
+        APPROVING = 1,
+        NONE = 2
+    }
+    interface ScomXchainWidgetElement extends ControlElement {
+        campaignId?: number;
+        lazyLoad?: boolean;
+        tokens?: ITokenConfig[];
+        defaultChainId: number;
+        networks: INetworkConfig[];
+        wallets: IWalletPlugin[];
+        showHeader?: boolean;
+        commissions?: ICommissionInfo[];
+        defaultInputToken?: ITokenConfig;
+    }
+    global {
+        namespace JSX {
+            interface IntrinsicElements {
+                ['i-scom-xchain-widget']: ScomXchainWidgetElement;
+            }
+        }
+    }
+    export default class ScomXchainWidget extends Module implements BlockNoteSpecs {
+        private tabs;
+        private brigeRecordTab;
+        private swapTab;
+        private swapContainer;
+        private pnlBridgeRecord;
+        private receiveContainer;
+        private payBalance;
+        private receiveBalance;
+        private firstTokenInput;
+        private secondTokenInput;
+        private payCol;
+        private receiveCol;
+        private swapModal;
+        private priceInfo;
+        private priceInfo2;
+        private priceInfoContainer;
+        private fromTokenImage;
+        private fromTokenLabel;
+        private fromTokenValue;
+        private toTokenImage;
+        private toTokenLabel;
+        private toTokenValue;
+        private payOrReceiveValue;
+        private payOrReceiveToken;
+        private txStatusModal;
+        private maxButton;
+        private swapBtn;
+        private actionSetting;
+        private fromTokenSymbol;
+        private toTokenSymbol;
+        private timeout;
+        private isPriceToggled;
+        private configModel;
+        private xchainModel;
+        private swapButtonText;
+        private _lastUpdated;
+        private lastUpdatedText;
+        private timer;
+        private $eventBus;
+        private estimateMsg;
+        private payOrReceiveText;
+        private approvalModelAction;
+        private crossChainApprovalStatus;
+        private oldSupportedChainList;
+        private minSwapHintLabel;
+        private srcChainFirstPanel;
+        private targetChainFirstPanel;
+        private srcChainTokenImage;
+        private srcChainTokenLabel;
+        private targetChainTokenImage;
+        private targetChainTokenLabel;
+        private targetChainSecondPanel;
+        private targetChainVaultImage;
+        private targetChainVaultLabel;
+        private targetVaultTokenImage;
+        private targetVaultTokenLabel;
+        private targetVaultTokenValue;
+        private targetVaultAssetBalanceLabel1;
+        private targetVaultBondBalanceLabel1;
+        private crossChainSoftCapLabel1;
+        private targetVaultAssetBalanceLabel2;
+        private targetVaultBondBalanceLabel2;
+        private crossChainSoftCapLabel2;
+        private swapModalConfirmBtn;
+        private crossChainVaultInfoVstack;
+        private modalFees;
+        private feesInfo;
+        private pnlReminderRejected;
+        private lbReminderRejectedValue;
+        private btnSourceChain;
+        private mdSourceChain;
+        private listElmSrcChain;
+        private isSrcOpened;
+        private expertModal;
+        private transactionModal;
+        private bridgeRecord;
+        private btnDestinationChain;
+        private mdDestinationChain;
+        private listElmDesChain;
+        private isDesOpened;
+        private dappContainer;
+        private mdWallet;
+        private state;
+        private isInited;
+        tag: any;
+        constructor(parent?: Container, options?: any);
+        addBlock(blocknote: any, executeFn: executeFnType, callbackFn?: callbackFnType): {
+            block: any;
+            slashItem: {
+                name: string;
+                execute: (editor: BlockNoteEditor) => void;
+                aliases: string[];
+                group: string;
+                icon: {
+                    name: string;
+                };
+                hint: string;
+            };
+            moduleData: {
+                name: string;
+                localPath: string;
+            };
+        };
+        removeRpcWalletEvents(): void;
+        onHide(): void;
+        private get lastUpdated();
+        private set lastUpdated(value);
+        private get defaultTargetChainId();
+        private get supportedChainList();
+        get defaultChainId(): number;
+        set defaultChainId(value: number);
+        get wallets(): IWalletPlugin[];
+        set wallets(value: IWalletPlugin[]);
+        get networks(): INetworkConfig[];
+        set networks(value: INetworkConfig[]);
+        get showHeader(): boolean;
+        set showHeader(value: boolean);
+        set width(value: string | number);
+        get chainId(): number;
+        getConfigurators(): ({
+            name: string;
+            target: string;
+            elementName: string;
+            getLinkParams: () => {
+                data: string;
+            };
+            bindOnChanged: (element: import("@scom/scom-commission-fee-setup").default, callback: (data: any) => Promise<void>) => void;
+            getData: () => Promise<{
+                fee: string;
+                campaignId?: number;
+                commissions?: ICommissionInfo[];
+                tokens?: ITokenConfig[];
+                defaultChainId: number;
+                wallets: IWalletPlugin[];
+                networks: INetworkConfig[];
+                showHeader?: boolean;
+                defaultInputToken?: ITokenConfig;
+            }>;
+            setData: (properties: IXchainWidgetData, linkParams?: Record<string, any>) => Promise<void>;
+            getTag: any;
+            setTag: any;
+            getActions?: undefined;
+        } | {
+            name: string;
+            target: string;
+            getActions: (category?: string) => any[];
+            getData: any;
+            setData: any;
+            getTag: any;
+            setTag: any;
+            elementName?: undefined;
+            getLinkParams?: undefined;
+            bindOnChanged?: undefined;
+        })[];
         private resetRpcWallet;
-        private setData;
-        private getTag;
-        private updateTag;
-        private setTag;
+        getData(): IXchainWidgetData;
+        setData(value: IXchainWidgetData): Promise<void>;
+        getTag(): any;
+        setTag(value: any): Promise<void>;
+        private setContainerTag;
         private updateStyle;
         private updateTheme;
         private refreshUI;
         private initData;
         isEmptyData(value: IXchainWidgetData): boolean;
+        private initModels;
         init(): Promise<void>;
         private fixedNumber;
-        private calculateDefaultTokens;
         private initWallet;
         private initializeWidgetConfig;
         private onChainChange;
@@ -1481,7 +1976,6 @@ declare module "@scom/scom-xchain-widget" {
         private onUpdateToken;
         private onSelectToken;
         private setApprovalModalSpenderAddress;
-        private getInputValue;
         private updateTokenInput;
         private onSelectRouteItem;
         private onTokenInputChange;
@@ -1489,12 +1983,6 @@ declare module "@scom/scom-xchain-widget" {
         private initRoutes;
         private handleAddRoute;
         private onTogglePrice;
-        private getTradeFeeExactAmount;
-        private getFeeDetails;
-        private getPriceInfo;
-        private onUpdateEstimatedPosition;
-        private isEstimated;
-        private getBalance;
         private updateBalances;
         private getSwapButtonText;
         private getWarningMessageText;
@@ -1506,12 +1994,10 @@ declare module "@scom/scom-xchain-widget" {
         private onSubmit;
         private onApproveRouterMax;
         private onSetMaxBalance;
-        private isMaxDisabled;
         private onRenderPriceInfo;
         private onRefresh;
         private onSetting;
         private get isMetaMask();
-        private getSupportedChainList;
         private onShowSourceChain;
         private onCloseSourceChain;
         private onShowDestinationChain;
@@ -1519,7 +2005,6 @@ declare module "@scom/scom-xchain-widget" {
         private disableSelectChain;
         private selectSourceChain;
         private selectDestinationChain;
-        private getSupportedTokens;
         private onSourceChainChanged;
         private onSelectSourceChain;
         private onSelectDestinationChain;
@@ -1528,7 +2013,6 @@ declare module "@scom/scom-xchain-widget" {
         private renderChainList;
         private showModalFees;
         private closeModalFees;
-        private getTokenObjArr;
         private resizeBridgeRecord;
         private initBridgeRecord;
         private initExpertModal;

@@ -145,12 +145,12 @@ export const bridgeStyle = Styles.style({
                   justifyContent: 'flex-end',
                   alignItems: 'center',
                 },
-                'img': {
-                  minWidth: '24px',
-                  height: '24px',
-                  marginRight: '0.25rem',
-                  width: 'auto'
-                },
+                // 'img': {
+                //   minWidth: '24px',
+                //   height: '24px',
+                //   marginRight: '0.25rem',
+                //   width: 'auto'
+                // },
               },
             },
             'i-button:last-child': {

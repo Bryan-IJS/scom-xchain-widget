@@ -2,6 +2,7 @@ import { customElements, customModule, Module, Container, ControlElement, Modal,
 import { EventId } from '../global/index';
 import { State } from '../store/index';
 import styleClass from './index.css';
+import { expertModeJson } from '../languages/index';
 
 declare global {
   namespace JSX {
@@ -25,8 +26,10 @@ export class ExpertModeSettings extends Module {
   };
 
   async init() {
+    this.i18n.init({...expertModeJson});
     this.classList.add(styleClass);
     super.init();
+    this.onToggle = this.onToggle.bind(this);
   }
 
   closeModal() {
@@ -48,10 +51,10 @@ export class ExpertModeSettings extends Module {
       <i-modal id="expertModal" class='dark-modal' title="Expert Mode" closeIcon={{ name: 'times' }}>
         <i-panel class="expert-content">
           <i-panel class="warning-box">
-            <i-label caption="Expert mode allows high slippage trades that often result in bad rates and lost funds."></i-label>
+            <i-label caption="$expert_mode_allows_high_slippage_trades_that_often_result_in_bad_rates_and_lost_funds"></i-label>
           </i-panel>
-          <i-label class="warning-text" caption="Only use this mode if you know what you are doing."></i-label>
-          <i-button width="100%" height="auto" caption="Turn On Expert Mode" onClick={this.onToggle.bind(this)}></i-button>
+          <i-label class="warning-text" caption="$only_use_this_mode_if_you_know_what_you_are_doing"></i-label>
+          <i-button width="100%" height="auto" caption="$turn_on_expert_mode" onClick={this.onToggle}></i-button>
         </i-panel>
       </i-modal>
     )

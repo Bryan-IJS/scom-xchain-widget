@@ -1,6 +1,7 @@
 import { customElements, Module, Control, ControlElement, Panel, Image, Label, Icon, HStack, Container } from '@ijstech/components';
 import './index.css';
 import Assets from '../assets';
+import { priceInfoJson } from '../languages/index';
 
 declare global {
   namespace JSX {
@@ -30,7 +31,7 @@ export class PriceInfo extends Module {
   }
 
   renderItems = async () => {
-    if (this.priceContent.children.length === this.Items.length) {
+    if (this.Items.length && this.priceContent?.children?.length === this.Items.length) {
       this.updateItems();
       return;
     }
@@ -100,8 +101,8 @@ export class PriceInfo extends Module {
     iconTooltip.height = 15;
     iconTooltip.fill = '#fff';
     if (item.onClick) {
-      iconTooltip.classList.add('cur-pointer');
-      iconTooltip.tooltip.content = 'Click to view details';
+      iconTooltip.cursor = 'pointer';
+      iconTooltip.tooltip.content = '$click_to_view_details';
       iconTooltip.tooltip.placement = 'right';
       iconTooltip.tooltip.maxWidth = '270px';
       iconTooltip.onClick = item.onClick;
@@ -150,13 +151,14 @@ export class PriceInfo extends Module {
   }
 
   init() {
+    this.i18n.init({...priceInfoJson});
     super.init();
   }
 
   render() {
     return (
       <i-panel class="price-info" width="auto">
-        <i-label class="header" caption="Price Info" padding={{ bottom: '0.5rem' }} font={{ size: '1.125rem' }}></i-label>
+        <i-label class="header" caption="$price_info" padding={{ bottom: '0.5rem' }} font={{ size: '1.125rem' }}></i-label>
         <i-panel id="priceContent"></i-panel>
       </i-panel>
     )

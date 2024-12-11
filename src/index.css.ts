@@ -354,14 +354,6 @@ export const swapStyle = Styles.style({
         },
       }
     },
-    '.text-pink': {
-      color: Theme.colors.primary.main,
-      $nest: {
-        '*': {
-          color: Theme.colors.primary.main,
-        },
-      },
-    },
     '.cursor-input--default': {
       cursor: 'default',
       $nest: {
