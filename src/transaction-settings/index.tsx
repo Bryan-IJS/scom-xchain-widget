@@ -5,12 +5,12 @@ import {
   Container,
   ControlElement,
   Modal,
-  VStack,
   Panel,
 } from '@ijstech/components';
 import { TransactionSettingsLayout } from '../transaction-settings-layout/index';
 import styleClass from './index.css';
 import { State } from '../store/index';
+import { transactionsJson } from '../languages/index';
 
 declare global {
   namespace JSX {
@@ -47,6 +47,7 @@ export class TransactionSettings extends Module {
   }
 
   async init() {
+    this.i18n.init({...transactionsJson});
     this.classList.add(styleClass);
     super.init();
     this.transactionLayout = new TransactionSettingsLayout(this.state);
@@ -67,7 +68,7 @@ export class TransactionSettings extends Module {
       <i-modal
         id="transactionModal"
         class='dark-modal'
-        title="Transaction Settings"
+        title="$transaction_settings"
         closeIcon={{ name: 'times' }}
       >
         <i-panel id="mainContent"></i-panel>

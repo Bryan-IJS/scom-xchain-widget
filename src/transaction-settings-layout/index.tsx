@@ -18,6 +18,7 @@ import {
 import { EventId } from '../global/index';
 import { State } from '../store/index';
 import styleClass from './index.css';
+import { transactionsJson } from '../languages/index';
 const Theme = Styles.Theme.ThemeVars;
 
 declare global {
@@ -91,6 +92,7 @@ export class TransactionSettingsLayout extends Module {
   }
 
   async init() {
+    this.i18n.init({...transactionsJson});
     this.classList.add(styleClass);
     super.init();
     this.switchBox.checked = this.state.isExpertMode;
@@ -127,7 +129,7 @@ export class TransactionSettingsLayout extends Module {
 
   private async onRenderWarningElm() {
     this.crossChainDeadlineMessage = await Label.create();
-    this.crossChainDeadlineMessage.caption = 'Please enter a valid transaction deadline';
+    this.crossChainDeadlineMessage.caption = '$please_enter_a_valid_transaction_deadline';
     this.crossChainDeadlineMessage.classList.add('slippage-message');
 
     this.warningIcon = await Icon.create({
@@ -174,7 +176,7 @@ export class TransactionSettingsLayout extends Module {
         } else if (hasWarningIcon)
           this.slippageInput.removeChild(this.warningIcon);
       } else {
-        this.slippageToleranceMessage = 'Please enter a valid slippage percentage';
+        this.slippageToleranceMessage = '$please_enter_a_valid_slippage_percentage';
         this.slippageInput.classList.add('transaction-input__error');
         if (hasWarningIcon)
           this.slippageInput.removeChild(this.warningIcon);
@@ -201,13 +203,13 @@ export class TransactionSettingsLayout extends Module {
   private setSlippageToleranceMessage = () => {
     const slippageTolerance = this.state.getSlippageTolerance();
     if (slippageTolerance < 0.5) {
-      return (this.slippageToleranceMessage = 'Your transaction may fail');
+      return (this.slippageToleranceMessage = '$your_transaction_may_fail');
     } else if (slippageTolerance >= 0.5 && slippageTolerance <= 5) {
       return (this.slippageToleranceMessage = '');
     } else if (slippageTolerance > 5 && slippageTolerance < 50) {
-      return (this.slippageToleranceMessage = 'Your transaction may be frontrun');
+      return (this.slippageToleranceMessage = '$your_transaction_may_be_frontrun');
     } else {
-      return (this.slippageToleranceMessage = 'Please enter a valid slippage percentage');
+      return (this.slippageToleranceMessage = '$please_enter_a_valid_slippage_percentage');
     }
   }
 
@@ -267,14 +269,14 @@ export class TransactionSettingsLayout extends Module {
     return (
       <i-panel class="settings-content">
         <i-hstack id="slippageRow" verticalAlignment='center'>
-          <i-label caption="Slippage Tolerance"></i-label>
+          <i-label caption="$slippage_tolerance"></i-label>
           <i-icon
             width={16}
             height={16}
             name="question-circle"
             fill="rgba(255,255,255,0.55)"
             tooltip={{
-              content: 'Your transaction will revert if the price changes unfavorably by more than this percentage.'
+              content: '$your_transaction_will_revert_if_the_price_changes_unfavorably_by_more_than_this_percentage'
             }}
           ></i-icon>
         </i-hstack>
@@ -293,14 +295,14 @@ export class TransactionSettingsLayout extends Module {
           <i-label class="slippage-message" caption={this.slippageToleranceMessage}></i-label>
         </i-hstack>
         <i-hstack id="crossChainDeadlineRow" visible={false} verticalAlignment='center' class="trans-title">
-          <i-label caption="Cross chain transaction deadline"></i-label>
+          <i-label caption="$cross_chain_transaction_deadline"></i-label>
           <i-icon
             width={16}
             height={16}
             name="question-circle"
             fill="rgba(255,255,255,0.55)"
             tooltip={{
-              content: 'Your transaction will revert if it is pending for more than this long.'
+              content: '$your_transaction_will_revert_if_it_is_pending_for_more_than_this_long'
             }}
           ></i-icon>
         </i-hstack>
@@ -314,19 +316,19 @@ export class TransactionSettingsLayout extends Module {
             onChanged={this.inputCrossChainDeadline}
             onBlur={this.blurCrossChainTransactionDeadline}
           ></i-input>
-          <i-label class="ml-1" caption="hours"></i-label>
+          <i-label class="ml-1" caption="$hours"></i-label>
           <i-hstack id="crossChainDeadlineGroup"></i-hstack>
         </i-hstack>
         <i-hstack id="switchBoxRow" visible={false} horizontalAlignment='space-between' verticalAlignment='center' class="mt-1">
-          <i-label class="toggle-text" caption="Toggle Expert Mode"></i-label>
+          <i-label class="toggle-text" caption="$toggle_expert_mode"></i-label>
           <i-switch
             id="switchBox"
             checkedTrackColor="transparent"
             uncheckedTrackColor="transparent"
-            checkedThumbText="Off"
-            uncheckedThumbText="On"
-            checkedText="Off"
-            uncheckedText="On"
+            checkedThumbText="$off"
+            uncheckedThumbText="$on"
+            checkedText="$off"
+            uncheckedText="$on"
             checked={this.state?.isExpertMode}
             onClick={this.handleProcessExpertMode}
           ></i-switch>

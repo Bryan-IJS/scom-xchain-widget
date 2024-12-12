@@ -41,3 +41,5 @@ export {
   registerSendTxEvents,
   TokenMapType
 } from './common';
+
+export * from './interface';

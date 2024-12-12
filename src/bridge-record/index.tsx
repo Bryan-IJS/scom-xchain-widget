@@ -42,6 +42,7 @@ import { Wallet, BigNumber } from '@ijstech/eth-wallet';
 import ScomTokenInput from '@scom/scom-token-input';
 import { ITokenObject } from '@scom/scom-token-list';
 import ScomTxStatusModal from '@scom/scom-tx-status-modal';
+import { bridgeRecordJson } from '../languages/index';
 const Theme = Styles.Theme.ThemeVars;
 
 const enum DateOptions {
@@ -114,7 +115,7 @@ export class BridgeRecord extends Module {
   private chainId: number;
   private _lastUpdated: number = 0;
   @observable()
-  private lastUpdatedText: string = 'Data last updated 0 seconds ago';
+  private lastUpdatedText: string = '$data_last_updated_0_seconds_ago';
   @observable()
   private paging: IPagination = {
     position: 'bottomRight',
@@ -204,7 +205,7 @@ export class BridgeRecord extends Module {
 
   set lastUpdated(value: number) {
     this._lastUpdated = value;
-    this.lastUpdatedText = `Data last updated ${this._lastUpdated} seconds ago`;
+    this.lastUpdatedText = this.i18n.get('$data_last_updated_seconds_ago', {value: `${this._lastUpdated}`});
   }
 
   get networkList(): IExtendedNetwork[] {
@@ -266,13 +267,13 @@ export class BridgeRecord extends Module {
     this.isPageKept = false;
     this.paging.currentPage = 1;
     this.sortByDate = DateOptions.LATEST;
-    this.sortDateBtn.caption = 'Latest Swap';
+    this.sortDateBtn.caption = '$latest_swap';
     this.filter = {};
     this.oldSource = Object.assign({}, this.sourceChain);
     this.oldDestination = Object.assign({}, this.destinationChain);
     this.iconRefresh.enabled = false;
     if (connected) {
-      this.emptyMsg.caption = 'No Data';
+      this.emptyMsg.caption = '$no_data';
       try {
         await this.generateData();
       } catch (err) {
@@ -280,7 +281,7 @@ export class BridgeRecord extends Module {
       }
     } else {
       this.resetData();
-      this.emptyMsg.caption = 'Please connect with your wallet';
+      this.emptyMsg.caption = '$please_connect_with_your_wallet';
     }
     this.iconRefresh.enabled = true;
     this.lastUpdated = 0;
@@ -295,7 +296,7 @@ export class BridgeRecord extends Module {
       <i-image url={Assets.fullPath('img/icon-advice.svg')} />
       <i-panel>
         <i-label
-          caption="No Data"
+          caption="$no_data"
           font={{ size: '1rem', color: Theme.text.primary, bold: true }}
           margin={{ left: 10 }}
         />
@@ -309,7 +310,7 @@ export class BridgeRecord extends Module {
     this.sortDateModal.visible = false;
     if (this.sortByDate === value) return;
     this.sortByDate = value;
-    this.sortDateBtn.caption = value === DateOptions.LATEST ? 'Latest Swap' : 'Oldest Swap';
+    this.sortDateBtn.caption = value === DateOptions.LATEST ? '$latest_swap' : '$oldest_swap';
     await this.updateRecords();
   }
 
@@ -333,7 +334,7 @@ export class BridgeRecord extends Module {
           const _url = this.destinationChain.url;
           this.searchDestinationBtn.prepend(<i-image class="network-img" url={_url} />);
         } else {
-          this.searchDestinationBtn.caption = 'Destination Chain';
+          this.searchDestinationBtn.caption = '$destination_chain';
         }
       }
       this.sourceChain = network;
@@ -342,7 +343,7 @@ export class BridgeRecord extends Module {
       this.searchSourceBtn.prepend(<i-image class="network-img" url={url} />);
     } else {
       this.sourceChain = null;
-      this.searchSourceBtn.caption = 'Source Chain';
+      this.searchSourceBtn.caption = '$source_chain';
     }
     this.oldSource = Object.assign({}, this.sourceChain);
     await this.updateRecords();
@@ -368,7 +369,7 @@ export class BridgeRecord extends Module {
           const _url = this.sourceChain.url;
           this.searchSourceBtn.prepend(<i-image class="network-img" url={_url} />);
         } else {
-          this.searchSourceBtn.caption = 'Source Chain';
+          this.searchSourceBtn.caption = '$source_chain';
         }
       }
       this.destinationChain = network;
@@ -377,7 +378,7 @@ export class BridgeRecord extends Module {
       this.searchDestinationBtn.prepend(<i-image class="network-img" url={url} />);
     } else {
       this.destinationChain = null;
-      this.searchDestinationBtn.caption = 'Destination Chain';
+      this.searchDestinationBtn.caption = '$destination_chain';
     }
     this.oldDestination = Object.assign({}, this.destinationChain);
     await this.updateRecords();
@@ -387,7 +388,7 @@ export class BridgeRecord extends Module {
     this.searchTokenGroupModal.visible = false;
     if (this.assetName === value) return;
     this.assetName = value;
-    this.searchTokenGroupBtn.caption = value || 'Token Group';
+    this.searchTokenGroupBtn.caption = value || '$token_group';
     await this.updateRecords();
   }
 
@@ -487,6 +488,7 @@ export class BridgeRecord extends Module {
   }
 
   async init() {
+    this.i18n.init({...bridgeRecordJson});
     await super.init();
     this.chainId = this.state.getChainId();
     this.renderFilterButton();
@@ -514,7 +516,7 @@ export class BridgeRecord extends Module {
       await clientWallet.switchNetwork(chainId);
       return;
     }
-    showResultMessage(this.txStatusModal, 'warning', 'Confirming');
+    showResultMessage(this.txStatusModal, 'warning', this.i18n.get('$confirming'));
     let btnElement = this.btnElm;
 
     const callback = async (err: Error, receipt?: string) => {
@@ -635,18 +637,18 @@ export class BridgeRecord extends Module {
       this.switchNetworkPnl.visible = false;
       this.confirmNetwork.visible = true;
     }
-    this.titleModalLabel.caption = isCancel ? 'Request Cancel' : 'Withdraw';
-    this.networkNameLabel.caption = isCancel ? 'Destination Chain' : 'Source Chain';
+    this.titleModalLabel.caption = isCancel ? '$request_cancel' : '$withdraw';
+    this.networkNameLabel.caption = isCancel ? '$destination_chain' : '$source_chain';
     this.networkNameVal.caption = network.chainName;
     const amount = record.sourceVaultInAmount || null;
     const symbol = record.sourceVaultToken?.symbol || '';
     this.withdrawAmount.caption = amount === null ? '-' : `${formatNumber(new BigNumber(amount).multipliedBy(new BigNumber(1).minus(protocolFee)))} ${symbol}`;
     this.noteCancelOrWithdraw.caption = isCancel ?
-      `You can withdraw the tokens after the cancellation is approved by the bridge trolls. The cancellation is subjected to a <span class="highlight-text">${new BigNumber(protocolFee).multipliedBy(100).toFixed(2)}%</span> cancellation fee.` :
-      'The token will be returned to your wallet after withdrawal.';
+      this.i18n.get('$you_can_withdraw_the_tokens_after_the_cancellation_is_approved_by_the_bridge_trolls._the_cancellation_is_subjected_to_a_cancellation_fee', {fee: `${new BigNumber(protocolFee).multipliedBy(100).toFixed(2)}%`}) :
+      '$the_token_will_be_returned_to_your_wallet_after_withdrawal';
     this.noteNetwork.caption = isCancel ?
-      'The request must be submitted from the destination chain, please switch your network as instructed.' :
-      'The request must be submitted from the source chain, please switch your network as instructed.';
+      '$the_request_must_be_submitted_from_the_destination_chain,_please_switch_your_network_as_instructed' :
+      '$the_request_must_be_submitted_from_the_source_chain,_please_switch_your_network_as_instructed';
     this.requestCancelModal.visible = true;
   }
 
@@ -796,13 +798,13 @@ export class BridgeRecord extends Module {
         dropdownDestination.innerHTML = '';
         dropdownSource.appendChild(
           <i-button
-            caption='Source Chain'
+            caption='$source_chain'
             onClick={() => this.onChangeSource()}
           />
         );
         dropdownDestination.appendChild(
           <i-button
-            caption='Destination Chain'
+            caption='$destination_chain'
             onClick={() => this.onChangeDestination()}
           />
         );
@@ -810,13 +812,15 @@ export class BridgeRecord extends Module {
           const url = item.image;
           dropdownSource.appendChild(
             <i-button
-              caption={`<i-image url="${url}" /> ${item.chainName}`}
+              icon={{margin: {right: '0.25rem'}, image: {url, width: 16, height: 16}}}
+              caption={item.chainName}
               onClick={() => this.onChangeSource({ ...item, url })}
             />
           );
           dropdownDestination.appendChild(
             <i-button
-              caption={`<i-image url="${url}" /> ${item.chainName}`}
+              icon={{margin: {right: '0.25rem'}, image: {url, width: 16, height: 16}}}
+              caption={item.chainName}
               onClick={() => this.onChangeDestination({ ...item, url })}
             />
           );
@@ -827,7 +831,7 @@ export class BridgeRecord extends Module {
         dropdownTokenGroup.innerHTML = '';
         dropdownTokenGroup.appendChild(
           <i-button
-            caption="Token Group"
+            caption="$token_group"
             onClick={() => this.onChangeTokenGroup()}
           />
         );
@@ -847,19 +851,19 @@ export class BridgeRecord extends Module {
         dropdownTokenGroup.innerHTML = '';
         dropdownTokenGroup.appendChild(
           <i-button
-            caption="Token Group"
+            caption="$token_group"
             onClick={() => this.onChangeTokenGroup()}
           />
         );
         dropdownSource.appendChild(
           <i-button
-            caption='Source Chain'
+            caption='$source_chain'
             onClick={() => this.onChangeSource()}
           />
         );
         dropdownDestination.appendChild(
           <i-button
-            caption='Destination Chain'
+            caption='$destination_chain'
             onClick={() => this.onChangeDestination()}
           />
         );
@@ -877,7 +881,7 @@ export class BridgeRecord extends Module {
           <i-panel>
             <i-label
               id="emptyMsg"
-              caption="No Data"
+              caption="$no_data"
               font={{ size: '1rem', color: Theme.text.primary, bold: true }}
               margin={{ left: 10 }}
             />
@@ -902,7 +906,12 @@ export class BridgeRecord extends Module {
         <i-panel class="bg-item">
           <i-hstack class="row-item">
             <i-vstack class="header-item">
-              <i-label caption={`<b>${fromSymbol}</b> to <b>${toSymbol}</b> #${orderId}`} />
+              <i-hstack gap="4px" verticalAlignment="center">
+                <i-label caption={fromSymbol} font={{bold: true}} />
+                <i-label caption={'to'} />
+                <i-label caption={toSymbol} font={{bold: true}} />
+                <i-label caption={`#${orderId}`} />
+              </i-hstack>
               {/* <i-label class="text-grey text-small" caption={date} /> */}
             </i-vstack>
             <i-vstack class="ml-auto">
@@ -941,14 +950,14 @@ export class BridgeRecord extends Module {
     if (['Pending', 'Expired'].includes(record.status)) {
       btn = (
         <i-panel class="group-btn" margin={{ bottom: 20 }}>
-          <i-button caption="Amend Order" height="35" class="btn-request btn-os" onClick={(e: Button) => this.showResubmitModal(e, record)} />
-          <i-button caption="Request Cancel" height="35" class="btn-request btn-cancel btn-os" onClick={(e: Button) => this.showCancelOrWithdrawModal(e, record, true)} />
+          <i-button caption="$amend_order" height="35" class="btn-request btn-os" onClick={(e: Button) => this.showResubmitModal(e, record)} />
+          <i-button caption="$request_cancel" height="35" class="btn-request btn-cancel btn-os" onClick={(e: Button) => this.showCancelOrWithdrawModal(e, record, true)} />
         </i-panel>
       );
     } else if (record.status === 'Cancel Approved') {
       btn = (
         <i-vstack margin={{ bottom: 20 }} horizontalAlignment="center">
-          <i-button caption="Withdraw" height="35" class="btn-request btn-os" onClick={(e: Button) => this.showCancelOrWithdrawModal(e, record)} />
+          <i-button caption="$withdraw" height="35" class="btn-request btn-os" onClick={(e: Button) => this.showCancelOrWithdrawModal(e, record)} />
         </i-vstack>
       );
     }
@@ -975,7 +984,7 @@ export class BridgeRecord extends Module {
                 width="14px"
                 height="14px"
                 fill={Theme.text.primary}
-                tooltip={{ content: 'The address has been copied', trigger: 'click' }}
+                tooltip={{ content: '$the_address_has_been_copied', trigger: 'click' }}
                 onClick={() => application.copyToClipboard(record.sender || '')}
                 class="inline-flex pointer"
               ></i-icon>
@@ -1026,7 +1035,7 @@ export class BridgeRecord extends Module {
               <i-panel class="btn-dropdown" width='165px'>
                 <i-button
                   id="sortDateBtn"
-                  caption="Latest Swap"
+                  caption="$latest_swap"
                   rightIcon={{ name: "angle-down" }}
                   width="calc(100% - 1px)"
                   font={{ size: '1rem' }}
@@ -1038,8 +1047,8 @@ export class BridgeRecord extends Module {
                   popupPlacement='bottom'
                 >
                   <i-panel>
-                    <i-button caption="Latest Swap" onClick={() => this.onChangeSorting(DateOptions.LATEST)} />
-                    <i-button caption="Oldest Swap" onClick={() => this.onChangeSorting(DateOptions.OLDEST)} />
+                    <i-button caption="$latest_swap" onClick={() => this.onChangeSorting(DateOptions.LATEST)} />
+                    <i-button caption="$oldest_swap" onClick={() => this.onChangeSorting(DateOptions.OLDEST)} />
                   </i-panel>
                 </i-modal>
               </i-panel>
@@ -1048,7 +1057,7 @@ export class BridgeRecord extends Module {
                 <i-button
                   id="searchTokenGroupBtn"
                   rightIcon={{ name: "angle-down" }}
-                  caption="Token Group"
+                  caption="$token_group"
                   width="calc(100% - 1px)"
                   font={{ size: '1rem' }}
                 ></i-button>
@@ -1064,7 +1073,7 @@ export class BridgeRecord extends Module {
                 <i-button
                   id="searchSourceBtn"
                   rightIcon={{ name: "angle-down" }}
-                  caption="Source Chain"
+                  caption="$source_chain"
                   width="calc(100% - 1px)"
                   font={{ size: '1rem' }}
                 ></i-button>
@@ -1080,7 +1089,7 @@ export class BridgeRecord extends Module {
                 <i-button
                   id="searchDestinationBtn"
                   rightIcon={{ name: "angle-down" }}
-                  caption="Destination Chain"
+                  caption="$destination_chain"
                   width="calc(100% - 1px)"
                   font={{ size: '1rem' }}
                 ></i-button>
@@ -1102,7 +1111,7 @@ export class BridgeRecord extends Module {
                   image={{ url: Assets.fullPath('img/loading.svg'), width: 36, height: 36 }}
                 ></i-icon>
                 <i-label
-                  caption="Loading..." font={{ color: '#FD4A4C', size: '1.5em' }}
+                  caption="$loading" font={{ color: '#FD4A4C', size: '1.5em' }}
                   class="i-loading-spinner_text"
                 ></i-label>
               </i-vstack>
@@ -1137,7 +1146,7 @@ export class BridgeRecord extends Module {
           </i-panel>
           <i-modal id="requestCancelModal" class="custom-modal_header" width={400} maxWidth="95%">
             <i-hstack class="header" horizontalAlignment="space-between">
-              <i-label id="titleModalLabel" caption="Request Cancel" />
+              <i-label id="titleModalLabel" caption="$request_cancel" />
               <i-icon width={20} height={20} class="cursor-pointer" name="times" fill={Theme.colors.primary.main} onClick={() => this.closeModal()} />
             </i-hstack>
             <i-panel background={{ color: Theme.divider }} height={2} width='100%' margin={{ top: 10, bottom: 20 }} />
@@ -1146,7 +1155,7 @@ export class BridgeRecord extends Module {
               <i-label id="networkNameVal" />
             </i-hstack>
             <i-hstack horizontalAlignment="space-between" margin={{ bottom: 20 }}>
-              <i-label caption="Withdraw Amount" />
+              <i-label caption="$withdraw_amount" />
               <i-label id="withdrawAmount" />
             </i-hstack>
             <i-panel width="100%" margin={{ bottom: 30 }}>
@@ -1157,38 +1166,38 @@ export class BridgeRecord extends Module {
                 <i-label id="noteNetwork" class="inline" font={{ color: 'yellow' }} />
               </i-panel>
               <i-hstack margin={{ top: 20, bottom: 20 }} horizontalAlignment="center">
-                <i-button height='auto' width={150} maxWidth='50%' class="btn-bridge btn-os" caption='Switch Network' onClick={() => this.onSwitchNetwork(ActionType.Cancel)} />
+                <i-button height='auto' width={150} maxWidth='50%' class="btn-bridge btn-os" caption='$switch_network' onClick={() => this.onSwitchNetwork(ActionType.Cancel)} />
               </i-hstack>
             </i-panel>
             <i-panel id="confirmNetwork" visible={false}>
               <i-hstack margin={{ top: 20, bottom: 20 }} horizontalAlignment="center">
-                <i-button height='auto' width={150} maxWidth='50%' class="btn-bridge btn-os" caption='Confirm' onClick={() => this.onConfirm()} />
+                <i-button height='auto' width={150} maxWidth='50%' class="btn-bridge btn-os" caption='$confirm' onClick={() => this.onConfirm()} />
               </i-hstack>
             </i-panel>
           </i-modal>
 
           <i-modal id="resubmitOrderModal" class="custom-modal_header" width={400} maxWidth="95%">
             <i-hstack class="header" horizontalAlignment="space-between">
-              <i-label caption="Amend Order" />
+              <i-label caption="$amend_order" />
               <i-icon width={20} height={20} class="cursor-pointer" name="times" fill={Theme.colors.primary.main} onClick={() => this.closeResubmitModal()} />
             </i-hstack>
             <i-panel background={{ color: Theme.divider }} height={2} width="100%" margin={{ top: 10, bottom: 20 }} />
             <i-hstack horizontalAlignment="space-between" verticalAlignment="center" margin={{ bottom: 20 }}>
-              <i-label caption="Token Receive" />
+              <i-label caption="$token_receive" />
               <i-scom-token-input id="tokenReceiveSelection" class="custom-token-input" isInputShown={false} isBtnMaxShown={false} isBalanceShown={false} isCommonShown={false} isSortBalanceShown={false} width="auto" />
             </i-hstack>
             <i-hstack horizontalAlignment="space-between" margin={{ bottom: 20 }}>
-              <i-label caption="Expected Receive" />
+              <i-label caption="$expected_receive" />
               <i-label id="resubmitExpectedReceive" />
             </i-hstack>
             <i-panel id="resubmitConfirmNetwork">
               <i-hstack margin={{ top: 20, bottom: 20 }} horizontalAlignment="center">
-                <i-button height="auto" width={150} maxWidth="50%" class="btn-bridge btn-os" caption="Switch Network" onClick={() => this.onSwitchNetwork(ActionType.Resubmit)} />
+                <i-button height="auto" width={150} maxWidth="50%" class="btn-bridge btn-os" caption="$switch_network" onClick={() => this.onSwitchNetwork(ActionType.Resubmit)} />
               </i-hstack>
             </i-panel>
             <i-panel id="resubmitConfirmPnl" visible={false}>
               <i-hstack margin={{ top: 20, bottom: 20 }} horizontalAlignment="center">
-                <i-button height='auto' width={150} maxWidth='50%' class="btn-bridge btn-os" caption="Confirm" onClick={() => this.onConfirm(ActionType.Resubmit)} />
+                <i-button height='auto' width={150} maxWidth='50%' class="btn-bridge btn-os" caption="$confirm" onClick={() => this.onConfirm(ActionType.Resubmit)} />
               </i-hstack>
             </i-panel>
           </i-modal>
